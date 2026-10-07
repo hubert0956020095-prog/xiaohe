@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1230">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="小鶴彩券行">
+<title>小鶴彩券行</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Huninn&family=Noto+Sans+TC:wght@900&display=swap">
+<style>
+/* Layout: two scenes. 1) A night street: the shop's lightbox sign, arcade ceiling, glass doors; tap the doors to walk in (doors slide, camera zooms).
+   2) Inside: back wall with the owner, then one big wooden table covered in individual scratch tickets to pick from; a fixed bottom bar is the checkout. Single warm-night look on purpose. */
+[hidden]{display:none!important}
+:root{
+  --sky:#0d1230; --sky-2:#1d2350; --wall:#2b1e1b; --wall-2:#3a2924;
+  --red:#d7262e; --red-deep:#9e1820; --yellow:#ffd84a; --yellow-deep:#d9a91a;
+  --wood:#8a5a33; --wood-2:#6a4123; --wood-3:#a8733f;
+  --glass:#7fb3cc; --tile-a:#7b3a32; --tile-b:#8e4a40; --steel:#b9bfc9;
+  --paper:#fff8e6; --ink:#1d1512; --muted:#c9b79c; --muted-ink:#6f5f4c;
+  --win:#3ddc97; --lose:#8d8277; --hot:#ff4d6d;
+  --t10:#ff9f1c; --t10-soft:#ffe6bf; --t10-ink:#5a3300;
+  --t20:#ff6f9c; --t20-soft:#ffd6e3; --t20-ink:#5c0f2a;
+  --t50:#22c3b0; --t50-soft:#c8f4ee; --t50-ink:#063f39;
+  --t100:#8a5cff; --t100-soft:#e5dbff; --t100-ink:#24104f;
+  --foil-a:#dcdbe6; --foil-b:#a9a8ba;
+  --sign-font:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --body:"Huninn","Microsoft JhengHei","PingFang TC",sans-serif;
+  --num:"Bungee","Arial Black",Impact,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--sky);color:var(--paper);font-family:var(--body);font-size:16px;line-height:1.55}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+
+/* ================= scene 1: storefront ================= */
+.front{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:18px;overflow:hidden;position:relative;
+  background:radial-gradient(ellipse at 50% 100%,#3a2a45 0%,transparent 60%),linear-gradient(180deg,var(--sky),var(--sky-2));padding-block:24px 28px;padding-inline:16px}
+.stars{position:absolute;inset:0;background-image:radial-gradient(1px 1px at 12% 14%,#fff,transparent),radial-gradient(1px 1px at 33% 8%,#fff,transparent),radial-gradient(1.5px 1.5px at 72% 12%,#fff,transparent),radial-gradient(1px 1px at 88% 22%,#fff,transparent),radial-gradient(1px 1px at 55% 4%,#fff,transparent);opacity:.7;pointer-events:none}
+.building{position:relative;width:min(520px,100%);display:flex;flex-direction:column;transform-origin:50% 72%;transition:transform 1.15s cubic-bezier(.55,0,.75,.4)}
+.facade{background:linear-gradient(180deg,#4b4f5e,#3d404d);padding:16px 14px 0;border-radius:6px 6px 0 0;box-shadow:inset 0 -8px 0 rgba(0,0,0,.25)}
+.lightbox{background:var(--red);border:4px solid #e9e9ee;border-radius:6px;padding:12px 14px;display:flex;align-items:center;gap:12px;justify-content:center;
+  box-shadow:0 0 30px rgba(215,38,46,.65),0 0 80px rgba(255,216,74,.18);animation:hum 4s infinite}
+@keyframes hum{0%,100%{filter:brightness(1)}48%{filter:brightness(1)}50%{filter:brightness(.82)}52%{filter:brightness(1)}}
+.lightbox svg{width:62px;height:auto;flex:none}
+.lightbox h1{margin:0;font-family:var(--sign-font);font-weight:900;color:var(--yellow);font-size:clamp(32px,9vw,50px);letter-spacing:.06em;line-height:1.05;text-shadow:0 3px 0 var(--red-deep)}
+.lightbox p{margin:2px 0 0;color:var(--paper);font-size:13px;letter-spacing:.25em}
+.arcade{height:30px;background:#2c2e38;margin-inline:-14px;margin-top:14px;display:flex;align-items:center;justify-content:center}
+.tube{width:46%;height:6px;border-radius:4px;background:#f4fbff;box-shadow:0 0 18px 6px rgba(220,240,255,.5)}
+.shopfront{background:#ddd8cf;padding:10px 12px 0;display:flex;flex-direction:column;gap:8px;position:relative}
+.banner{background:var(--red);color:var(--yellow);text-align:center;font-family:var(--sign-font);font-weight:900;font-size:clamp(15px,4.2vw,20px);padding:6px 8px;border-radius:3px;letter-spacing:.06em}
+.banner b{font-family:var(--num);font-weight:400}
+.doorway{position:relative;aspect-ratio:1.25;max-width:100%;border:6px solid var(--steel);border-bottom:0;overflow:hidden;cursor:pointer;padding:0;background:none;display:block;width:100%}
+.inside-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,#ffe8a8,#d99b3b 55%,#5a3416);}
+.inside-glow::before{content:"";position:absolute;left:12%;right:12%;bottom:0;height:34%;background:linear-gradient(180deg,var(--wood-3),var(--wood-2));border-radius:6px 6px 0 0}
+.inside-glow::after{content:"";position:absolute;left:18%;right:18%;bottom:24%;height:10%;
+  background:repeating-linear-gradient(90deg,var(--t10) 0 7%,transparent 7% 8%,var(--t20) 8% 15%,transparent 15% 16%,var(--t50) 16% 23%,transparent 23% 24%,var(--t100) 24% 31%,transparent 31% 32%);opacity:.9}
+.door{position:absolute;top:0;bottom:0;width:50%;background:linear-gradient(115deg,rgba(127,179,204,.55),rgba(127,179,204,.25) 40%,rgba(255,255,255,.35) 46%,rgba(127,179,204,.3) 52%,rgba(127,179,204,.5));
+  border:5px solid var(--steel);transition:transform 1s cubic-bezier(.6,0,.4,1);display:flex;align-items:center;justify-content:center}
+.door.l{left:0;border-right-width:3px}.door.r{right:0;border-left-width:3px}
+.door .handle{position:absolute;top:44%;width:6px;height:46px;background:var(--steel);border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.door.l .handle{right:8px}.door.r .handle{left:8px}
+.poster{background:var(--yellow);color:var(--red);font-family:var(--sign-font);font-weight:900;padding:8px 6px;border-radius:4px;writing-mode:vertical-rl;font-size:clamp(18px,5vw,26px);letter-spacing:.1em;
+  box-shadow:0 4px 10px rgba(0,0,0,.25);transform:rotate(-2deg)}
+.poster small{font-family:var(--body);font-weight:400;font-size:12px;color:var(--ink);margin-top:6px}
+.open-sign{background:var(--paper);color:var(--red);border:2px solid var(--red);border-radius:6px;padding:4px 10px;font-family:var(--sign-font);font-weight:900;font-size:16px;position:absolute;top:18%;
+  transform-origin:50% -18px;animation:swing 3s ease-in-out infinite}
+.open-sign::before{content:"";position:absolute;left:50%;top:-18px;width:1px;height:18px;background:#777}
+@keyframes swing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+.hours{position:absolute;right:16px;bottom:8px;font-size:11px;color:var(--ink);background:rgba(255,255,255,.75);padding:1px 6px;border-radius:3px;z-index:2;pointer-events:none}
+.floor{height:44px;background:repeating-conic-gradient(var(--tile-a) 0 25%,var(--tile-b) 0 50%) 0 0/22px 22px;margin-inline:-10%;transform:perspective(200px) rotateX(35deg);transform-origin:top}
+.enter{border:0;background:var(--yellow);color:var(--ink);border-radius:99px;padding:12px 30px;font-size:18px;cursor:pointer;box-shadow:0 4px 0 var(--yellow-deep),0 0 24px rgba(255,216,74,.35);animation:bob 1.6s ease-in-out infinite;position:relative;z-index:1}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.hint-line{color:var(--muted);font-size:13px;margin:0;position:relative}
+.front.entering .door.l{transform:translateX(-102%)}
+.front.entering .door.r{transform:translateX(102%)}
+.front.entering .building{transform:scale(3.4) translateY(4%)}
+.front.entering .enter,.front.entering .hint-line{opacity:0}
+.whiteout{position:fixed;inset:0;background:#ffe6a6;opacity:0;pointer-events:none;transition:opacity .45s;z-index:50}
+.whiteout.on{opacity:1}
+
+/* ================= scene 2: inside ================= */
+.inside{min-height:100%;background:linear-gradient(180deg,var(--wall) 0,var(--wall-2) 320px,#22160f 100%)}
+.wrap{max-width:1000px;margin:0 auto;padding-inline:16px;padding-block:18px 120px;display:flex;flex-direction:column;gap:18px}
+.wall{display:flex;flex-direction:column;gap:14px}
+.neon-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.neon{font-family:var(--sign-font);font-weight:900;font-size:clamp(22px,6vw,30px);color:#ffe08a;text-shadow:0 0 6px #ffb84a,0 0 18px #ff8a1f;letter-spacing:.1em;display:flex;align-items:center;gap:8px}
+.neon svg{width:40px}
+.ribbon{background:var(--red);color:var(--yellow);font-family:var(--sign-font);font-weight:900;padding:4px 12px;border-radius:3px;font-size:14px;letter-spacing:.05em}
+.ribbon b{font-family:var(--num);font-weight:400}
+.owner{display:flex;align-items:flex-end;gap:10px}
+.face{width:58px;height:58px;border-radius:50%;flex:none;background:#f1c9a0;position:relative;border:3px solid var(--paper);box-shadow:0 4px 0 rgba(0,0,0,.3)}
+.face::before{content:"";position:absolute;left:14px;top:24px;width:6px;height:6px;border-radius:50%;background:var(--ink);box-shadow:20px 0 0 var(--ink)}
+.face::after{content:"";position:absolute;left:20px;top:34px;width:14px;height:7px;border-radius:0 0 10px 10px;background:var(--red-deep)}
+.face i{position:absolute;left:-3px;right:-3px;top:-6px;height:20px;background:var(--red);border-radius:30px 30px 4px 4px}
+.face span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
+.bubble{background:var(--paper);color:var(--ink);border-radius:16px 16px 16px 4px;padding:10px 14px;max-width:min(520px,100%);min-width:0;position:relative;font-size:16px}
+.bubble.pop{animation:pop .35s}
+@keyframes pop{0%{transform:scale(.9)}60%{transform:scale(1.04)}100%{transform:none}}
+.wallet{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px dashed rgba(201,183,156,.5);border-radius:10px;overflow:hidden;background:rgba(0,0,0,.18)}
+.wallet > div{padding:8px 12px;display:flex;flex-direction:column;min-width:0}
+.wallet > div + div{border-left:1px dashed rgba(201,183,156,.5)}
+.wallet .k{font-size:12px;color:var(--muted);letter-spacing:.08em}
+.wallet .v{font-family:var(--num);font-size:clamp(17px,4.5vw,22px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.wallet .pend .v{color:var(--win)}
+.pool{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.pool b{font-family:var(--num);font-weight:400;color:var(--yellow);font-size:18px}
+.meter{flex:1;min-width:140px;height:8px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--yellow-deep),var(--yellow));transition:width .6s}
+
+/* the table */
+.table{position:relative;border-radius:22px;padding:22px 18px 26px;display:flex;flex-direction:column;gap:22px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.10),transparent 30%),
+    repeating-linear-gradient(92deg,rgba(0,0,0,.06) 0 3px,transparent 3px 22px,rgba(255,255,255,.04) 22px 24px,transparent 24px 47px),
+    linear-gradient(180deg,var(--wood-3),var(--wood));
+  box-shadow:0 0 0 10px var(--wood-2),0 0 0 12px #4a2c16,0 30px 60px rgba(0,0,0,.55),inset 0 0 60px rgba(0,0,0,.25)}
+.lamp{position:absolute;inset:-12px;border-radius:30px;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,rgba(255,230,160,.22),transparent 60%)}
+.props{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;position:relative}
+.stand{background:var(--paper);color:var(--ink);padding:6px 12px;border-radius:4px;font-size:13px;box-shadow:0 4px 0 rgba(0,0,0,.25);transform:rotate(-1.5deg)}
+.coins{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--paper);opacity:.9}
+.coin{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2b8,#e8c35a 50%,#a07a1c);display:grid;place-items:center;font-family:var(--num);font-size:11px;color:#7a5a10;box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.zone{display:flex;flex-direction:column;gap:12px;position:relative}
+.tent{align-self:flex-start;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--paper);color:var(--ink);border-radius:6px;padding:6px 12px;box-shadow:0 5px 0 rgba(0,0,0,.25);border-top:6px solid var(--tk)}
+.tent b{font-family:var(--num);font-weight:400;font-size:20px;color:var(--tk-ink)}
+.tent span{font-size:13px;color:var(--muted-ink)}
+.zone[data-t="t10"],.ticket[data-t="t10"],.mini[data-t="t10"]{--tk:var(--t10);--tk-soft:var(--t10-soft);--tk-ink:var(--t10-ink)}
+.zone[data-t="t20"],.ticket[data-t="t20"],.mini[data-t="t20"]{--tk:var(--t20);--tk-soft:var(--t20-soft);--tk-ink:var(--t20-ink)}
+.zone[data-t="t50"],.ticket[data-t="t50"],.mini[data-t="t50"]{--tk:var(--t50);--tk-soft:var(--t50-soft);--tk-ink:var(--t50-ink)}
+.zone[data-t="t100"],.ticket[data-t="t100"],.mini[data-t="t100"]{--tk:var(--t100);--tk-soft:var(--t100-soft);--tk-ink:var(--t100-ink)}
+.spread{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:12px 10px}
+.mini{position:relative;aspect-ratio:3/4.2;max-width:100%;border:0;padding:0;cursor:pointer;border-radius:6px;background:var(--tk-soft);color:var(--tk-ink);
+  transform:rotate(var(--r));transition:transform .2s,box-shadow .2s;box-shadow:0 3px 0 rgba(0,0,0,.18),0 6px 10px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden}
+.mini .m-top{background:var(--tk);color:var(--paper);font-size:10px;padding:3px 2px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background-image:repeating-linear-gradient(-45deg,rgba(255,255,255,.15) 0 4px,transparent 4px 8px)}
+.mini .m-price{font-family:var(--num);font-size:clamp(17px,4.5vw,22px);line-height:1;text-align:center;margin-top:6px}
+.mini .m-foil{margin:6px 6px 0;flex:1;border-radius:3px;background:linear-gradient(135deg,var(--foil-a),var(--foil-b) 50%,var(--foil-a))}
+.mini .m-no{font-size:9px;text-align:center;padding:2px 0 3px;font-variant-numeric:tabular-nums;opacity:.75}
+.mini:hover{transform:rotate(var(--r)) translateY(-4px)}
+.mini[aria-pressed="true"]{transform:rotate(0) translateY(-10px) scale(1.08);box-shadow:0 0 0 3px var(--yellow),0 16px 20px rgba(0,0,0,.4);z-index:2}
+.mini[aria-pressed="true"]::after{content:"✓";position:absolute;top:-2px;right:-2px;width:22px;height:22px;border-radius:50%;background:var(--yellow);color:var(--ink);display:grid;place-items:center;font-size:13px;font-weight:700}
+.gone-slot{aspect-ratio:3/4.2;border-radius:6px;border:1.5px dashed rgba(255,248,230,.25);display:grid;place-items:center;font-size:10px;color:rgba(255,248,230,.45);transform:rotate(var(--r))}
+.soldout{font-family:var(--num);color:var(--hot);border:3px solid var(--hot);border-radius:8px;padding:4px 12px;transform:rotate(-4deg);align-self:flex-start;background:rgba(0,0,0,.2)}
+.foot-links{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.linkish{background:none;border:0;color:var(--muted);text-decoration:underline;text-underline-offset:4px;cursor:pointer;font-size:14px;padding:4px}
+
+/* checkout bar */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:15;background:rgba(20,13,9,.94);border-top:1px solid rgba(201,183,156,.3);backdrop-filter:blur(6px);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.bar-in{max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.bar .mine{border:1.5px solid var(--muted);background:none;border-radius:99px;padding:8px 14px;cursor:pointer;white-space:nowrap;position:relative}
+.badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;background:var(--hot);color:#fff;font-size:12px;display:grid;place-items:center;padding:0 5px}
+.bar .sel{flex:1;min-width:0;font-size:14px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .sel b{font-family:var(--num);font-weight:400;color:var(--paper);font-size:18px}
+.btn{border:0;border-radius:99px;padding:10px 20px;cursor:pointer;font-size:16px;background:var(--ink);color:var(--paper);white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.y{background:var(--yellow);color:var(--ink);box-shadow:0 3px 0 var(--yellow-deep)}
+.btn.ghost{background:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
+
+/* overlays */
+.overlay{position:fixed;inset:0;background:rgba(12,8,6,.82);display:grid;place-items:center;padding:16px;z-index:30;overflow-y:auto}
+.sheet{background:var(--paper);color:var(--ink);border-radius:18px;padding:22px 20px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:12px}
+.sheet h3{margin:0;font-weight:400;font-size:20px}
+.sheet .owner .bubble{background:#f3e6c4}
+.lines{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.lines td{padding:6px 0;border-bottom:1px dashed #d8c9a5}
+.lines td:last-child{text-align:right}
+.lines tr.tot td{border-bottom:0;font-size:20px;padding-top:10px}
+.lines tr.tot td:last-child{font-family:var(--num)}
+.sheet .row{display:flex;gap:10px;flex-wrap:wrap}
+.sheet .row .btn{flex:1}
+.sheet .btn.ghost{color:var(--ink)}
+.mylist{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;max-height:60vh;overflow-y:auto}
+.tk{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e6d8b8;border-radius:10px;padding:8px 10px;cursor:pointer;text-align:left;min-width:0;color:var(--ink)}
+.tk .chip{width:10px;align-self:stretch;border-radius:3px;background:var(--t10);flex:none}
+.tk[data-t="t20"] .chip{background:var(--t20)}.tk[data-t="t50"] .chip{background:var(--t50)}.tk[data-t="t100"] .chip{background:var(--t100)}
+.tk .meta{flex:1;min-width:0;display:flex;flex-direction:column}
+.tk .meta small{color:var(--muted-ink);font-size:12px}
+.pill{font-size:12px;border-radius:99px;padding:2px 8px;white-space:nowrap}
+.pill.new{background:var(--yellow);color:var(--ink)}.pill.win{background:var(--win);color:var(--ink)}.pill.lose{background:#eee3cc;color:var(--muted-ink)}
+.empty{color:var(--muted-ink);margin:0}
+
+/* the scratch ticket */
+.ticket{width:100%;max-width:420px;background:var(--tk-soft);color:var(--tk-ink);border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.t-head{background:var(--tk);color:var(--paper);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;background-image:repeating-linear-gradient(-45deg,rgba(255,255,255,.12) 0 8px,transparent 8px 16px)}
+.t-head .name{font-size:22px;line-height:1.2;text-shadow:0 2px 0 rgba(0,0,0,.18)}
+.t-head .shop{font-size:12px;opacity:.9}
+.t-head .price{font-family:var(--num);font-size:32px;line-height:1;text-shadow:0 3px 0 rgba(0,0,0,.2);white-space:nowrap}
+.t-head .price small{font-family:var(--body);font-size:13px}
+.rule{margin:0;padding:12px 18px 0;font-size:14px;text-align:center}
+.game{display:flex;flex-direction:column;gap:8px;padding:12px 18px 0}
+.lab{font-size:12px;letter-spacing:.12em;opacity:.8;display:flex;justify-content:space-between;gap:8px}
+.sz{position:relative;border-radius:10px;overflow:hidden;background:var(--paper);box-shadow:inset 0 0 0 2px var(--tk);transition:background .3s}
+.sz canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;transition:opacity .5s;
+  cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Ccircle cx='17' cy='17' r='14' fill='%23e8c35a' stroke='%23a07a1c' stroke-width='2'/%3E%3Ctext x='17' y='22' font-size='14' text-anchor='middle' fill='%237a5a10' font-family='Arial' font-weight='bold'%3E1%3C/text%3E%3C/svg%3E") 17 17,crosshair}
+.sz canvas.gone{opacity:0;pointer-events:none}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.cell{aspect-ratio:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:1px dashed rgba(0,0,0,.12);min-width:0;transition:background .3s}
+.cell .n{font-family:var(--num);font-size:clamp(20px,6.5vw,28px);line-height:1;font-variant-numeric:tabular-nums}
+.cell .u{font-size:12px;opacity:.7}
+.cell .a{font-size:12px;font-variant-numeric:tabular-nums;opacity:.85}
+.ticket.done [data-win]{background:var(--yellow);animation:hit .9s ease-in-out 2}
+@keyframes hit{50%{transform:scale(1.05)}}
+/* 贏過老闆 (比大小) */
+.beat-head,.beat-row{display:grid;grid-template-columns:3.4em repeat(3,minmax(0,1fr));gap:8px;align-items:center}
+.beat-head span{font-size:12px;text-align:center;opacity:.8}
+.beat-row .lbl{font-size:13px}
+.beat-row .sz{grid-column:2/5;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.beat-row .sz > span{padding:9px 4px;text-align:center;font-family:var(--num);font-size:clamp(18px,5.5vw,24px);line-height:1.2;border-right:1px dashed rgba(0,0,0,.12)}
+.beat-row .sz > span:nth-child(3){border-right:0;font-size:clamp(14px,4.2vw,18px);display:flex;align-items:center;justify-content:center}
+/* 幸運號碼 (對號碼) */
+.win-nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.win-nums .cell{aspect-ratio:2.4}
+.your-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.your-nums .cell{aspect-ratio:1.25}
+/* 小鶴連線 */
+.line-wrap{display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr);gap:10px}
+.line-wrap > div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.sz.tall{flex:1}
+.prizebox{height:100%;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.prizebox .n{font-family:var(--num);font-size:clamp(18px,5.5vw,26px);line-height:1}
+.sym{width:62%;max-width:52px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-family:var(--sign-font);font-weight:900;font-size:clamp(16px,5vw,22px);color:var(--paper);box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.sym svg{width:78%;height:70%}
+.s-he{background:var(--red)}.s-fu{background:var(--t10)}.s-cai{background:var(--t50)}.s-xing{background:var(--t100)}.s-xin{background:var(--t20)}
+.cell .n .sym{width:1.6em;font-size:inherit}
+.result{min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 18px 0;text-align:center}
+.result .r1{font-size:15px}
+.result .r2{font-family:var(--num);font-size:32px;line-height:1.1}
+.result.win .r2{color:var(--hot)}
+.t-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 18px 0;font-size:12px;opacity:.7;font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:10px;padding:14px 18px 18px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.ticket .btn.ghost{color:var(--tk-ink)}
+
+/* owner's back office */
+.panel{background:var(--paper);color:var(--ink);border-radius:18px;width:100%;max-width:640px;padding:22px 20px;display:flex;flex-direction:column;gap:18px}
+.panel h3{margin:0;font-family:var(--sign-font);font-weight:900;font-size:22px}
+.panel h4{margin:0;font-weight:400;font-size:17px}
+.panel .hint{margin:0;font-size:14px;color:var(--muted-ink)}
+.scroll{overflow-x:auto}
+.ledger{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:15px;min-width:440px}
+.ledger th{font-weight:400;font-size:12px;color:var(--muted-ink);text-align:right;padding:6px 8px}
+.ledger th:first-child,.ledger td:first-child{text-align:left}
+.ledger td{padding:7px 8px;border-top:1px solid #eadfc4;text-align:right}
+.ledger tr.tot td{font-weight:700;border-top:2px solid var(--ink)}
+.payout{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fff0c2;border-radius:12px;padding:12px 14px}
+.payout b{font-family:var(--num);font-weight:400;font-size:24px}
+.ed{border:1px solid #eadfc4;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ed-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.ed-head label{display:flex;align-items:center;gap:6px;font-size:14px}
+.ed input{font:inherit;width:6.5em;min-width:0;padding:5px 8px;border:1.5px solid #dccc9f;border-radius:8px;background:#fffdf6;color:var(--ink)}
+.ed table{border-collapse:collapse;width:100%}
+.ed td{padding:3px 4px}
+.ed .x{background:none;border:0;color:var(--muted-ink);cursor:pointer;font-size:18px;border-radius:6px;padding:0 6px}
+.ed .add{background:none;border:1.5px dashed #dccc9f;color:var(--muted-ink);border-radius:8px;padding:5px;cursor:pointer}
+.ed .sum{font-size:13px;color:var(--muted-ink);font-variant-numeric:tabular-nums}
+.ed .sum.err{color:#c2203d}
+.grand{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;border-top:2px solid var(--ink);padding-top:10px}
+.grand b{font-family:var(--num);font-weight:400;font-size:26px}
+.panel .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.panel .btn.ghost{color:var(--ink)}
+.panel .btn.danger{background:#c2203d;color:#fff}
+
+.finale{width:100%;max-width:400px;background:var(--red);color:var(--paper);border:4px solid var(--yellow);border-radius:20px;padding:26px 22px 22px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 0 0 8px rgba(255,216,74,.18),0 0 60px rgba(215,38,46,.6);animation:finIn .7s cubic-bezier(.3,1.4,.5,1)}
+@keyframes finIn{from{transform:scale(.6) rotate(-3deg);opacity:0}to{transform:none;opacity:1}}
+.fin-crane{width:84px;height:58px}
+.fin-k{margin:0;font-size:15px;letter-spacing:.1em;color:var(--yellow)}
+.finale h3{margin:0;font-family:var(--num);font-weight:400;font-size:clamp(34px,10vw,46px);line-height:1.1;color:var(--yellow);text-shadow:0 3px 0 var(--red-deep)}
+.fin-520{margin:0;font-family:var(--sign-font);font-weight:900;font-size:20px}
+.fin-msg{margin:6px 0 0;font-size:clamp(20px,5.6vw,24px);line-height:1.45;text-wrap:balance}
+.fin-stats{margin:4px 0 8px;font-size:13px;opacity:.85;font-variant-numeric:tabular-nums}
+.finale .btn{padding:12px 34px;font-size:18px}
+.fin-dare{margin:6px 0 0;font-size:14px;color:var(--yellow)}
+.fin-btns{display:flex;gap:10px;flex-wrap:wrap;width:100%}
+.fin-btns .btn{flex:1}
+.finale .btn.ghost{color:var(--paper)}
+.endcard{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--red);border:2px solid var(--yellow);border-radius:12px;padding:12px 16px}
+.endcard b{font-weight:400;font-size:18px;color:var(--yellow);display:block}
+.endcard span{font-size:14px}
+/* the cruel coin game */
+.coinbox{width:100%;max-width:400px;background:var(--wall);border:3px solid var(--yellow);border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;color:var(--paper);
+  box-shadow:0 0 50px rgba(0,0,0,.6)}
+.coinbox .fin-k{color:var(--hot)}
+.coinbox h3{margin:0;font-family:var(--sign-font);font-weight:900;font-size:30px;color:var(--yellow);letter-spacing:.08em}
+.coin-rule{margin:0;font-size:14px;color:var(--muted);text-wrap:balance}
+.stake{display:flex;flex-direction:column;align-items:center}
+.stake span{font-size:13px;color:var(--muted)}
+.stake b{font-family:var(--num);font-weight:400;font-size:clamp(32px,9vw,40px);color:var(--yellow);line-height:1.1;font-variant-numeric:tabular-nums}
+.coin-stage{perspective:800px;padding-block:8px}
+.coin3d{width:130px;height:130px;position:relative;transform-style:preserve-3d;transition:transform 1.6s cubic-bezier(.2,.75,.25,1)}
+.coin3d .cf{position:absolute;inset:0;border-radius:50%;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:grid;place-items:center;
+  background:radial-gradient(circle at 35% 30%,#fff2b8,#e8c35a 50%,#a07a1c);box-shadow:inset 0 0 0 6px #c99a2e,inset 0 0 0 9px #f5d77a,0 10px 20px rgba(0,0,0,.4)}
+.coin3d .cf.tails{transform:rotateY(180deg)}
+.cf .inner{width:66%;height:66%;border-radius:50%;background:var(--red);display:grid;place-items:center}
+.cf .inner svg{width:80%;height:60%}
+.cf .word{font-family:var(--sign-font);font-weight:900;font-size:50px;color:var(--red-deep);line-height:1}
+.coin-legend{margin:0;font-size:13px;color:var(--muted)}
+.coin-msg{margin:0;font-size:17px;min-height:1.6em;text-wrap:balance}
+.coin-log{list-style:none;margin:0;padding:0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:2px}
+.coin-btns{display:flex;gap:10px;flex-wrap:wrap;width:100%}
+.coin-btns .btn{flex:1}
+.coinbox .btn.ghost{color:var(--paper)}
+@media (prefers-reduced-motion:reduce){.coin3d{transition:none}}
+.chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.chips button{border:1.5px solid #d8c9a5;background:#fffdf6;color:var(--ink);border-radius:10px;padding:8px 4px;cursor:pointer;font-family:var(--num);font-size:16px}
+.chips button[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow-deep)}
+.money-in{display:flex;align-items:center;gap:8px;border:2px solid var(--ink);border-radius:12px;padding:6px 12px;background:#fff}
+.money-in span{font-family:var(--num);font-size:18px}
+.money-in input{flex:1;min-width:0;border:0;background:none;font-family:var(--num);font-size:28px;color:var(--ink);padding:4px 0}
+.money-in input:focus-visible{outline:none}
+.money-in:focus-within{box-shadow:0 0 0 3px var(--yellow)}
+.sheet .err{color:#c2203d;font-size:14px;margin:0}
+.sheet .after{font-size:14px;color:var(--muted-ink);text-align:right;font-variant-numeric:tabular-nums}
+.sheet .after.short{color:#c2203d}
+.addbtn{align-self:flex-start;margin-top:4px;border:1px solid var(--muted);background:none;border-radius:99px;padding:1px 10px;font-size:12px;cursor:pointer;color:var(--paper)}
+.wallet .neg .v{color:var(--hot)}
+.settle{font-size:15px;color:var(--yellow);margin:0}
+.vh{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden}
+.offscreen{position:fixed;left:-2px;top:-2px;width:1px;height:1px;opacity:0;pointer-events:none}
+.rec-btn{margin-top:8px}
+.rec-hint{background:#f3e6c4;border-radius:10px;padding:8px 12px;font-size:14px;color:var(--muted-ink)}
+.vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-height:62vh;overflow-y:auto}
+.vid{margin:0;background:#fff;border:1px solid #e6d8b8;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.vid video{width:100%;aspect-ratio:3/4;object-fit:cover;background:#000;display:block}
+.vid figcaption{padding:8px 10px 0;display:flex;flex-direction:column}
+.vid figcaption b{font-weight:400;font-size:16px;color:var(--red-deep)}
+.vid figcaption span{font-size:12px;color:var(--muted-ink)}
+.vid-btns{display:flex;gap:8px;padding:8px 10px 10px}
+.vid-btns .btn{flex:1;padding:8px 10px;font-size:14px}
+.sheet .vid-btns .btn.ghost{color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--paper);border:1px solid var(--yellow);
+  border-radius:99px;padding:8px 16px;font-size:14px;max-width:calc(100% - 32px);text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.mk{width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px;align-items:center;color:var(--paper);text-align:center}
+.mk-stage{position:relative;width:100%;border-radius:14px;overflow:hidden;background:#000;border:3px solid var(--yellow)}
+.mk-stage video{display:block;width:100%;height:auto}
+.mk-stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.mk p{margin:0}
+/* ---- effects ---- */
+.snd{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px;z-index:26;border:1px solid rgba(255,248,230,.45);background:rgba(20,13,9,.6);color:var(--paper);
+  border-radius:99px;padding:4px 12px;font-size:13px;cursor:pointer;backdrop-filter:blur(4px)}
+.snd[aria-pressed="false"]{opacity:.65}
+.rays{position:absolute;inset:-60%;background:repeating-conic-gradient(rgba(255,236,170,.6) 0 8deg,transparent 8deg 22deg);opacity:0;transition:opacity .4s;pointer-events:none}
+.front.entering .rays{opacity:1;animation:spin 3s linear infinite}
+.front.entering .inside-glow{filter:brightness(1.6) saturate(1.2);transition:filter .6s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.welcome{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);font-family:var(--sign-font);font-weight:900;font-size:clamp(40px,12vw,76px);color:var(--red);
+  letter-spacing:.12em;opacity:0;white-space:nowrap;text-shadow:0 4px 0 rgba(158,24,32,.25)}
+.whiteout.on .welcome{animation:welcome 1.1s cubic-bezier(.3,1.4,.5,1) forwards}
+@keyframes welcome{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}45%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.dealing .mini{animation:deal .55s cubic-bezier(.3,1.4,.5,1) both;animation-delay:calc(var(--i) * 18ms)}
+@keyframes deal{from{opacity:0;transform:translateY(-46px) rotate(calc(var(--r) + 28deg)) scale(.5)}}
+#flash{position:fixed;inset:0;pointer-events:none;z-index:55;opacity:0}
+#flash.go{animation:flashA .65s ease-out}
+@keyframes flashA{0%{opacity:.9}100%{opacity:0}}
+.shake{animation:shakeA .5s}
+@keyframes shakeA{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-9px) rotate(-1deg)}40%,60%{transform:translateX(9px) rotate(1deg)}}
+.floater{position:fixed;z-index:65;pointer-events:none;font-family:var(--num);font-size:26px;transform:translate(-50%,-50%);animation:floatUp 1.5s ease-out forwards;text-shadow:0 2px 0 rgba(0,0,0,.45);white-space:nowrap}
+.floater.plus{color:var(--win)}.floater.minus{color:var(--hot)}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}15%{opacity:1;transform:translate(-50%,-70%) scale(1.2)}100%{opacity:0;transform:translate(-50%,-280%) scale(1)}}
+.ticket{position:relative}
+.stamp{position:absolute;right:12px;top:58px;z-index:3;pointer-events:none;font-family:var(--sign-font);font-weight:900;border:5px solid currentColor;border-radius:50%;width:104px;height:104px;
+  display:grid;place-items:center;text-align:center;font-size:28px;line-height:1.05;transform:rotate(-14deg);opacity:.88}
+.stamp.win{color:#d7262e}
+.stamp.big{color:#d7262e;width:126px;height:126px;font-size:38px;border-width:7px;border-style:double}
+.stamp.lose{color:#6f6a80;font-size:20px;border-radius:12px;width:auto;height:auto;padding:8px 12px}
+.stamp.go{animation:stampA .45s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes stampA{0%{opacity:0;transform:rotate(-14deg) scale(3.2)}60%{opacity:.95;transform:rotate(-14deg) scale(.9)}100%{transform:rotate(-14deg) scale(1)}}
+.mega-rays{position:fixed;inset:-50%;background:repeating-conic-gradient(rgba(255,216,74,.2) 0 10deg,transparent 10deg 24deg);animation:spin 9s linear infinite;pointer-events:none;opacity:0;transition:opacity .6s}
+#scratchOv.mega-bg{background:radial-gradient(circle at 50% 45%,rgba(255,216,74,.5),rgba(12,8,6,.86) 62%)}
+#scratchOv.mega-bg .mega-rays{opacity:1}
+.ticket.mega{animation:megaGlow 1.1s ease-in-out 4}
+@keyframes megaGlow{0%,100%{box-shadow:0 0 0 4px var(--yellow),0 0 60px 14px rgba(255,216,74,.55),0 24px 60px rgba(0,0,0,.55)}50%{box-shadow:0 0 0 6px var(--yellow),0 0 120px 40px rgba(255,216,74,.9),0 24px 60px rgba(0,0,0,.55)}}
+@media (prefers-reduced-motion:reduce){.front.entering .rays,.mega-rays,.dealing .mini,.stamp.go,.shake,.ticket.mega,.floater,.whiteout.on .welcome{animation:none}.whiteout.on .welcome{opacity:1;transform:translate(-50%,-50%)}}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+@media (prefers-reduced-motion:reduce){
+  .building,.door{transition:none}.lightbox,.open-sign,.enter{animation:none}.cell.hit{animation:none}.mini{transition:none}
+}
+/* ---- standalone page base ---- */
+html{-webkit-text-size-adjust:100%}
+body{margin:0;-webkit-tap-highlight-color:transparent}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+/* ---- live camera ---- */
+.pip{position:fixed;left:12px;top:calc(48px + env(safe-area-inset-top,0px));z-index:62;width:100px;aspect-ratio:3/4;border-radius:14px;overflow:hidden;
+  border:3px solid var(--hot);box-shadow:0 8px 20px rgba(0,0,0,.5);background:#000;animation:pipIn .35s cubic-bezier(.3,1.4,.5,1)}
+@keyframes pipIn{from{transform:scale(.4);opacity:0}}
+.pip video,.intro-stage video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+.rec-badge{position:absolute;top:6px;left:6px;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,.55);color:#fff;border-radius:99px;padding:1px 8px 1px 6px;font-size:12px;font-family:var(--num)}
+.rec-badge i{width:8px;height:8px;border-radius:50%;background:var(--hot);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+.pip-cap{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(158,24,32,.92));color:var(--yellow);font-family:var(--num);font-size:11px;text-align:center;padding:12px 2px 4px}
+.intro-stage{position:relative;width:100%;max-width:260px;align-self:center;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:#000;border:3px solid var(--yellow)}
+.intro-stage .rec-badge{font-size:16px;top:10px;left:10px}
+.snd.cam{right:auto;left:12px}
+.vid-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.pip{animation:none}.rec-badge i{animation:none}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="crane" viewBox="0 0 64 44">
+    <polygon points="20,27 33,1 40,27" fill="#fff8e6"/>
+    <polygon points="26,27 33,1 40,27" fill="#f0dcae"/>
+    <polygon points="13,29 32,39 50,29 32,25" fill="#fff8e6"/>
+    <polygon points="13,29 5,9 19,27" fill="#fff8e6"/>
+    <polygon points="5,9 0,15 7,12" fill="#fff8e6"/>
+    <polygon points="50,29 63,12 45,27" fill="#f0dcae"/>
+    <circle cx="5" cy="9" r="1.2" fill="#d7262e"/>
+  </symbol>
+</svg>
+
+<!-- ============ scene 1: outside ============ -->
+<section class="front" id="front" aria-label="小鶴彩券行門口">
+  <div class="stars"></div>
+  <div class="building" id="building">
+    <div class="facade">
+      <div class="lightbox">
+        <svg aria-hidden="true"><use href="#crane"/></svg>
+        <div><h1>小鶴彩券行</h1><p>刮刮樂專賣 · 現金交易</p></div>
+      </div>
+      <div class="arcade"><i class="tube"></i></div>
+    </div>
+    <div class="shopfront">
+      <div class="banner">刮刮樂 · 每張 10 元起</div>
+      <button class="doorway" id="doorBtn" type="button" aria-label="推門走進小鶴彩券行">
+        <span class="inside-glow"></span>
+        <span class="rays"></span>
+        <span class="door l"><span class="poster">刮刮樂<small>10 · 20 · 50 · 100</small></span><i class="handle"></i></span>
+        <span class="door r"><span class="open-sign">營業中</span><i class="handle"></i></span>
+      </button>
+      <span class="hours">營業時間 10:00–22:00</span>
+    </div>
+    <div class="floor"></div>
+  </div>
+  <button class="enter" id="enterBtn" type="button">推門進去</button>
+  <p class="hint-line" id="frontHint">叮咚～ 點門或按鈕走進店裡</p>
+</section>
+<div class="whiteout" id="whiteout"><span class="welcome">歡迎光臨</span></div>
+
+<!-- ============ scene 2: inside ============ -->
+<section class="inside" id="inside" hidden aria-label="店內">
+  <div class="wrap">
+    <header class="wall">
+      <div class="neon-row">
+        <div class="neon"><svg aria-hidden="true"><use href="#crane"/></svg>小鶴彩券行</div>
+        <div class="ribbon">今日手氣旺</div>
+      </div>
+      <div class="owner">
+        <div class="face"><i></i><span>小鶴老闆</span></div>
+        <div class="bubble" id="bubble">歡迎光臨～桌上的刮刮樂隨便挑，挑好拿來結帳。</div>
+      </div>
+    </header>
+
+    <section class="wallet" aria-label="我的帳">
+      <div><span class="k">錢包</span><span class="v" id="wBal">0</span><button class="addbtn" id="addMoney" type="button">＋ 再拿錢出來</button></div>
+      <div><span class="k">帶進來</span><span class="v" id="wIn">0</span></div>
+      <div class="pend" id="wNetBox"><span class="k">目前輸贏</span><span class="v" id="wNet">0</span></div>
+    </section>
+
+    <section class="endcard" id="endCard" hidden>
+      <div><b>整桌都刮完了</b><span id="endNote">老闆有話跟你說</span></div>
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ghost" id="endVid" type="button" style="color:var(--paper)">回憶影片</button>
+        <button class="btn y" id="endBtn" type="button">打開</button>
+      </div>
+    </section>
+
+    <section class="table" aria-label="彩券桌">
+      <div class="lamp"></div>
+      <div class="props">
+        <div class="stand">挑好拿去櫃台 · 刮刮樂不退換</div>
+        <div class="coins"><span class="coin">1</span><span class="coin">1</span>刮的銅板在這</div>
+      </div>
+      <div id="zones" style="display:flex;flex-direction:column;gap:26px"></div>
+    </section>
+
+    <div class="foot-links">
+      <button class="linkish" id="goOut" type="button">走回門口</button>
+      <button class="linkish" id="bossOpen" type="button">老闆後台</button>
+    </div>
+  </div>
+
+  <nav class="bar" aria-label="結帳">
+    <div class="bar-in">
+      <button class="mine" id="mineBtn" type="button">我的彩券<span class="badge" id="mineBadge" hidden>0</span></button>
+      <button class="mine" id="vidBtn" type="button">影片</button>
+      <div class="sel" id="selInfo">點桌上的彩券來挑</div>
+      <button class="btn y" id="checkout" type="button" disabled>結帳</button>
+    </div>
+  </nav>
+</section>
+
+<!-- pay -->
+<div class="overlay" id="payOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+    <h3 id="payTitle">櫃台結帳</h3>
+    <div class="owner"><div class="face"><i></i></div><div class="bubble" id="payBubble">總共 NT$100，從錢包扣。</div></div>
+    <table class="lines" id="payLines"></table>
+    <div class="after" id="payAfter"></div>
+    <div class="row">
+      <button class="btn ghost" id="payCancel" type="button">再想想</button>
+      <button class="btn y" id="payOk" type="button">從錢包付</button>
+    </div>
+  </div>
+</div>
+
+<!-- my tickets -->
+<div class="overlay" id="mineOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mineTitle" style="max-width:620px">
+    <h3 id="mineTitle">我的彩券</h3>
+    <div class="mylist" id="mylist"></div>
+    <p class="empty" id="mineEmpty">還沒買。去桌上挑幾張吧。</p>
+    <div class="row"><button class="btn" id="mineClose" type="button">回到桌子</button></div>
+  </div>
+</div>
+
+<!-- scratch -->
+<div class="overlay" id="scratchOv" hidden>
+  <div class="mega-rays" aria-hidden="true"></div>
+  <div class="ticket" id="ticket" data-t="t100" role="dialog" aria-modal="true" aria-labelledby="tName">
+    <div class="stamp" id="stamp" hidden></div>
+    <div class="t-head">
+      <div><div class="shop" id="tShop">小鶴彩券行</div><div class="name" id="tName">甜甜小確幸</div></div>
+      <div class="price" id="tPrice">100<small>元</small></div>
+    </div>
+    <p class="rule" id="tRule"></p>
+    <div class="game" id="game"></div>
+    <div class="result" id="result" aria-live="polite"></div>
+    <div class="t-foot"><span id="tSerial">No.</span><span>小鶴彩券行 祝您中獎</span></div>
+    <div class="actions">
+      <button class="btn ghost" id="revealAll" type="button">一次刮開</button>
+      <button class="btn y" id="nextTk" type="button" hidden>刮下一張</button>
+      <button class="btn" id="closeScratch" type="button">收起來</button>
+    </div>
+  </div>
+</div>
+
+<!-- owner -->
+<div class="overlay" id="bossOv" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="bossTitle">
+    <h3 id="bossTitle">老闆後台</h3>
+    <section style="display:flex;flex-direction:column;gap:8px">
+      <h4>帳目 <span class="hint" id="batchTag" style="font-size:13px"></span></h4>
+      <div class="scroll"><table class="ledger" id="ledger"></table></div>
+    </section>
+    <div class="payout">
+      <div><span id="oweK">最後算帳</span> <b id="owe">NT$0</b></div>
+      <span class="hint" id="oweNote"></span>
+    </div>
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <h4>獎金結構</h4>
+      <p class="hint">改這裡只會用在「印新一批」。沒寫到的張數就是沒中獎。</p>
+      <div id="editor" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div class="ed">
+        <div class="ed-head"><span>幸運大獎（印的時候偷偷藏進一張 100 元彩券）</span></div>
+        <table><tr>
+          <td><label>金額 <input id="bonusAmt" type="number" min="0" step="1" inputmode="numeric"></label></td>
+          <td><label>機率 <input id="bonusPct" type="number" min="0" max="100" step="1" inputmode="numeric"> %</label></td>
+        </tr></table>
+      </div>
+      <div class="grand"><span>她全部刮完淨賺</span><b id="grand">NT$5,200</b></div>
+      <p class="hint" id="grandNote"></p>
+    </section>
+    <div class="row">
+      <button class="btn ghost" id="bossClose" type="button">關閉</button>
+      <button class="btn danger" id="reprint" type="button">印新一批</button>
+    </div>
+  </div>
+</div>
+
+<!-- finale: every ticket on the table has been scratched -->
+<div class="overlay" id="finaleOv" hidden>
+  <div class="finale" role="dialog" aria-modal="true" aria-labelledby="finTitle">
+    <svg class="fin-crane" aria-hidden="true"><use href="#crane"/></svg>
+    <p class="fin-k" id="finK">整桌刮刮樂都被你刮完了</p>
+    <h3 id="finTitle">淨賺 NT$5,200</h3>
+    <p class="fin-520" id="fin520">5200，就是我愛你</p>
+    <p class="fin-msg" id="finMsg">沒關係，不是最大獎，但是我愛你</p>
+    <p class="fin-stats" id="finStats"></p>
+    <p class="fin-dare">敢不敢玩最後的殘酷遊戲？丟硬幣，正面翻倍、反面減半。</p>
+    <div class="fin-btns">
+      <button class="btn ghost" id="finKeep" type="button">我也愛你，收下就好</button>
+      <button class="btn y" id="finCoin" type="button">丟硬幣</button>
+    </div>
+  </div>
+</div>
+
+<!-- the cruel game: one coin, double or half -->
+<div class="overlay" id="coinOv" hidden>
+  <div class="coinbox" role="dialog" aria-modal="true" aria-labelledby="coinTitle">
+    <p class="fin-k">殘酷遊戲</p>
+    <h3 id="coinTitle">丟硬幣</h3>
+    <p class="coin-rule">正面翻倍、反面減半。第一次免費；減半之後，付老闆 NT$500 可以再丟一次。翻倍就結束。</p>
+    <div class="stake"><span>現在的獎金</span><b id="coinAmt">NT$5,200</b></div>
+    <div class="coin-stage">
+      <div class="coin3d" id="coin3d">
+        <div class="cf heads"><span class="inner"><svg aria-hidden="true"><use href="#crane"/></svg></span></div>
+        <div class="cf tails"><span class="word">愛</span></div>
+      </div>
+    </div>
+    <p class="coin-legend">鶴＝正面，翻倍 · 愛＝反面，減半</p>
+    <p class="coin-msg" id="coinMsg" aria-live="polite"></p>
+    <ol class="coin-log" id="coinLog"></ol>
+    <div class="coin-btns" id="coinBtns"></div>
+    <button class="linkish" id="coinLater" type="button">晚點再決定</button>
+  </div>
+</div>
+
+<!-- opening speech: hands off to the phone's own front camera -->
+<div class="overlay" id="camOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="camTitle">
+    <h3 id="camTitle">進門前，先錄一段 15 秒感言</h3>
+    <p>說說今天想刮到多少、刮到要拿來做什麼。</p>
+    <div class="intro-stage" id="introStage" hidden>
+      <video id="introVideo" playsinline muted autoplay></video>
+      <span class="rec-badge" id="introRec" hidden><i></i><span id="introCount">15</span></span>
+    </div>
+    <div class="rec-hint" id="camHint">按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每次中獎，鏡頭也會自動錄 10 秒反應。</div>
+    <div class="row">
+      <button class="btn ghost" id="camSkip" type="button">跳過</button>
+      <button class="btn y" id="camGo" type="button">打開前鏡頭</button>
+    </div>
+  </div>
+</div>
+
+<!-- memory wall -->
+<div class="overlay" id="vidOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="vidTitle" style="max-width:760px">
+    <div class="vid-top"><h3 id="vidTitle">回憶影片</h3><button class="btn y" id="saveAll" type="button">全部存到相簿</button></div>
+    <p>影片存在這支手機的遊戲裡，畫面下方印著當下抽到的獎。按「存到相簿」iPhone 會跳出分享選單，選「儲存影片」。</p>
+    <div class="vids" id="vids"></div>
+    <p class="empty" id="vidEmpty">還沒有影片。進門前的感言、每次中獎的反應都可以錄。</p>
+    <div class="row"><button class="btn" id="vidClose" type="button">回到桌子</button></div>
+  </div>
+</div>
+<input class="vh" id="camInput" type="file" accept="video/*" capture="user" tabindex="-1" aria-hidden="true">
+<div class="toast" id="toast" role="status" hidden></div>
+
+<!-- how much money she brings in (virtual; settled in real cash afterwards) -->
+<div class="overlay" id="bringOv" hidden>
+  <form class="sheet" id="bringForm" role="dialog" aria-modal="true" aria-labelledby="bringTitle">
+    <h3 id="bringTitle">今天帶多少錢來刮？</h3>
+    <p id="bringSub">店裡用的是虛擬錢。刮完以後，再跟老闆用現金算差額。</p>
+    <div class="chips" id="bringChips">
+      <button type="button" data-v="500">500</button><button type="button" data-v="1000">1,000</button><button type="button" data-v="2000">2,000</button>
+      <button type="button" data-v="3000">3,000</button><button type="button" data-v="5000">5,000</button><button type="button" data-v="5800">5,800</button>
+    </div>
+    <label class="money-in" for="bringIn"><span>NT$</span><input id="bringIn" type="number" min="10" max="100000" step="10" inputmode="numeric" value="1000" aria-label="金額"></label>
+    <p class="err" id="bringErr" hidden></p>
+    <div class="row">
+      <button class="btn ghost" id="bringCancel" type="button">再想想</button>
+      <button class="btn y" id="bringOk" type="submit">帶著錢進去</button>
+    </div>
+  </form>
+</div>
+
+<!-- shown while a clip is re-recorded with the prize banner; the source video must stay on screen for browsers to decode it -->
+<div class="overlay" id="mkOv" hidden>
+  <div class="mk" role="status">
+    <div class="mk-stage" id="mkStage"></div>
+    <p id="mkText">正在把獎項印進影片…</p>
+  </div>
+</div>
+
+<div id="flash" aria-hidden="true"></div>
+<div class="pip" id="pip" hidden>
+  <video id="pipVideo" playsinline muted autoplay></video>
+  <span class="rec-badge"><i></i><span id="pipCount">10</span></span>
+  <span class="pip-cap" id="pipCap"></span>
+</div>
+<button class="snd cam" id="camBtn" type="button" aria-pressed="true">鏡頭 開</button>
+<button class="snd" id="sndBtn" type="button" aria-pressed="true">聲音 開</button>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script>
+(() => {
+  const KEY = 'xiaohe-lottery-v7';
+  const DEFAULT_CONFIG = [
+    { id: 't10', game: 'match3', price: 10, name: '小確幸', count: 50, prizes: [{ amt: 500, qty: 1 }, { amt: 100, qty: 2 }, { amt: 50, qty: 2 }, { amt: 20, qty: 5 }, { amt: 10, qty: 10 }] },
+    { id: 't20', game: 'beat', price: 20, name: '甜甜好運', count: 40, prizes: [{ amt: 1000, qty: 1 }, { amt: 200, qty: 1 }, { amt: 50, qty: 4 }, { amt: 20, qty: 5 }] },
+    { id: 't50', game: 'numbers', price: 50, name: '戀愛發大財', count: 30, prizes: [{ amt: 1500, qty: 1 }, { amt: 500, qty: 1 }, { amt: 100, qty: 3 }, { amt: 50, qty: 4 }] },
+    { id: 't100', game: 'line', price: 100, name: '寶貝富貴金', count: 30, prizes: [{ amt: 3000, qty: 1 }, { amt: 1000, qty: 1 }, { amt: 500, qty: 2 }, { amt: 100, qty: 10 }] }
+  ];
+  // Default batch: all 150 tickets cost NT$5,800 and pay NT$11,000, so finishing the table nets her NT$5,200 (520 = 我愛你).
+  // At the end she can gamble the NT$5,200 on a coin: heads doubles it to NT$10,400, tails halves it.
+  const DEFAULT_BONUS = { amt: 4800, chance: 0 };  // the coin game replaced the hidden lucky prize; the owner can still turn it on
+  const SYMBOLS = [10, 20, 50, 100, 200, 500, 1000, 3000, 5000];
+  const LINES = {
+    pick: ['眼光不錯喔', '這張我看會中', '這疊今天手氣很旺', '挑這張？有膽識', '我剛剛就覺得這張會中'],
+    unpick: ['放回去啦？沒關係慢慢挑', '換一張也好'],
+    win: ['恭喜恭喜！等一下來櫃台領錢', '中了中了！老闆心在淌血', '手氣這麼好，再來一張？'],
+    lose: ['下一張一定中啦', '沒關係，好運還在桌上', '銘謝惠顧～再挑一張'],
+    paid: ['謝謝光臨，慢慢刮', '錢收到了，祝你中大獎'],
+    soldout: ['這種賣完了，看看別的']
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n) => Number(n).toLocaleString('zh-TW');
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const rand = () => { try { return crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296; } catch (e) { return Math.random(); } };
+  const pickOne = (a) => a[Math.floor(rand() * a.length)];
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  // ---------- sound: everything is synthesized with Web Audio, nothing to download ----------
+  const SFX = (() => {
+    let recDest = null, micSrc = null, micFor = null;
+    let ac = null, master = null, noiseBuf = null, scratchGain = null, bgmTimer = 0, bgmNext = 0, bgmStep = 0, on = true;
+    try { on = localStorage.getItem('xiaohe-sound') !== 'off'; } catch (e) {}
+    const N = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    function ctx() {
+      try {
+        if (!ac) { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = on ? .9 : 0; master.connect(ac.destination); }
+        if (ac.state === 'suspended') ac.resume();
+        return ac;
+      } catch (e) { return null; }
+    }
+    function tone(f, at, dur, o = {}) {
+      const a = on && ctx(); if (!a) return;
+      const t = a.currentTime + Math.max(0, at), osc = a.createOscillator(), g = a.createGain();
+      osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(f, t);
+      if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t + dur);
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || .15, t + (o.attack || .01)); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      osc.connect(g).connect(master); osc.start(t); osc.stop(t + dur + .05);
+    }
+    function nbuf(a) {
+      if (!noiseBuf) { noiseBuf = a.createBuffer(1, a.sampleRate * 2, a.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+      return noiseBuf;
+    }
+    function noise(at, dur, o = {}) {
+      const a = on && ctx(); if (!a) return;
+      const t = a.currentTime + Math.max(0, at), src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+      src.buffer = nbuf(a); src.loop = true;
+      f.type = o.filter || 'bandpass'; f.frequency.setValueAtTime(o.freq || 1500, t); if (o.slide) f.frequency.exponentialRampToValueAtTime(o.slide, t + dur); f.Q.value = o.q || 1;
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || .15, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      src.connect(f).connect(g).connect(master); src.start(t); src.stop(t + dur + .05);
+    }
+    const arp = (notes, at, step, o) => notes.forEach((m, i) => tone(N(m), at + i * step, o.dur || .35, o));
+    const S = {
+      chime() { tone(N(76), 0, 1, { vol: .25 }); tone(N(88), 0, .6, { vol: .05 }); tone(N(72), .34, 1.3, { vol: .25 }); tone(N(84), .34, .7, { vol: .05 }); },
+      door() { noise(0, 1, { vol: .14, freq: 300, slide: 2600, q: .6 }); tone(N(43), 0, .35, { type: 'triangle', vol: .12 }); },
+      sparkle() { arp([84, 88, 91, 96, 100], 0, .06, { type: 'triangle', vol: .07, dur: .5 }); },
+      pick() { noise(0, .07, { vol: .22, freq: 3200, q: 2 }); tone(N(88), 0, .09, { type: 'triangle', vol: .06 }); },
+      unpick() { noise(0, .05, { vol: .14, freq: 1800, q: 2 }); tone(N(76), 0, .08, { type: 'triangle', vol: .04 }); },
+      blip() { tone(N(79 + Math.floor(Math.random() * 6)), 0, .06, { type: 'square', vol: .025 }); },
+      coins(at, n) { for (let i = 0; i < n; i++) tone(N(88 + Math.random() * 14), at + i * .05 + Math.random() * .03, .16, { type: 'triangle', vol: .05 }); },
+      register() { noise(0, .12, { vol: .2, freq: 900, q: 1.5 }); tone(N(96), .1, .7, { type: 'triangle', vol: .16 }); tone(N(103), .14, .8, { type: 'triangle', vol: .1 }); S.coins(.2, 6); },
+      coinDrop() { [0, .1, .17, .22, .26].forEach((t, i) => tone(N(94 - i), t, .25, { type: 'triangle', vol: .1 })); },
+      scratch() {
+        const a = on && ctx(); if (!a) return;
+        if (!scratchGain) {
+          const src = a.createBufferSource(), f = a.createBiquadFilter();
+          src.buffer = nbuf(a); src.loop = true; f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = .8;
+          scratchGain = a.createGain(); scratchGain.gain.value = 0;
+          src.connect(f).connect(scratchGain).connect(master); src.start();
+        }
+        const t = a.currentTime;
+        scratchGain.gain.cancelScheduledValues(t);
+        scratchGain.gain.setTargetAtTime(.16, t, .01);
+        scratchGain.gain.setTargetAtTime(0, t + .06, .04);
+      },
+      reveal() { tone(N(79), 0, .18, { type: 'triangle', vol: .1, slide: N(91) }); },
+      stamp() { noise(0, .14, { vol: .35, freq: 250, filter: 'lowpass' }); tone(N(38), 0, .18, { vol: .3 }); },
+      winSmall() { arp([72, 76, 79, 84], 0, .08, { type: 'triangle', vol: .16 }); S.coins(.3, 6); },
+      winMid() { arp([72, 76, 79, 84, 79, 84, 88], 0, .09, { type: 'triangle', vol: .16, dur: .4 }); [60, 64, 67].forEach(m => tone(N(m), .63, 1.2, { type: 'sawtooth', vol: .03 })); S.coins(.4, 14); },
+      winBig() {
+        for (let i = 0; i < 18; i++) noise(i * .05, .07, { vol: .06 + i * .008, freq: 180, filter: 'lowpass' });
+        [[60, 64, 67], [65, 69, 72], [67, 71, 74], [72, 76, 79]].forEach((ch, i) => ch.forEach(m => tone(N(m), .95 + i * .22, i === 3 ? 1.8 : .25, { type: 'sawtooth', vol: .04 })));
+        arp([72, 76, 79, 84, 88, 91, 96], 1.6, .07, { type: 'triangle', vol: .12, dur: .5 });
+        S.coins(1.7, 28);
+      },
+      lose() { [[67, 0], [66, .3], [65, .6]].forEach(([m, t]) => tone(N(m), t, .32, { type: 'sawtooth', vol: .06 })); tone(N(64), .9, .9, { type: 'sawtooth', vol: .06, slide: N(57) }); },
+      shutter() { noise(0, .04, { vol: .3, freq: 4200 }); noise(.07, .06, { vol: .22, freq: 2600 }); },
+      flipStart() { noise(0, .45, { vol: .12, freq: 700, slide: 4200, q: .7 }); for (let i = 0; i < 12; i++) tone(N(98), .12 + i * .1 * (1 + i * .06), .03, { type: 'square', vol: .03 }); },
+      flipLand() { tone(N(88), 0, .35, { type: 'triangle', vol: .18 }); tone(N(95), .06, .45, { type: 'triangle', vol: .1 }); noise(0, .05, { vol: .2, freq: 3000 }); },
+      love() { [72, 76, 79, 84, 83, 79, 81, 79, 76, 77, 76, 74, 72].forEach((m, i) => { tone(N(m), i * .3, 1.2, { vol: .12 }); tone(N(m + 12), i * .3, .5, { type: 'triangle', vol: .03 }); }); },
+      bgmStart() {
+        const a = on && ctx(); if (!a || bgmTimer) return;
+        const PROG = [[48, 60, 64, 67], [45, 57, 60, 64], [41, 57, 60, 65], [43, 55, 59, 62]], PENTA = [72, 74, 76, 79, 81, 84];
+        bgmNext = a.currentTime + .1; bgmStep = 0;
+        bgmTimer = setInterval(() => {
+          if (!on) return;
+          if (bgmNext < a.currentTime) bgmNext = a.currentTime + .05;  // came back from the camera: don't dump the backlog
+          while (bgmNext < a.currentTime + .5) {
+            const at = bgmNext - a.currentTime, beat = bgmStep % 8, ch = PROG[Math.floor(bgmStep / 8) % 4];
+            if (beat === 0 || beat === 4) tone(N(ch[0]), at, .5, { type: 'triangle', vol: .06 });
+            if (beat === 2 || beat === 6) ch.slice(1).forEach(m => tone(N(m), at, .25, { type: 'triangle', vol: .018 }));
+            if (Math.random() < .55) tone(N(PENTA[Math.floor(Math.random() * PENTA.length)]), at, .35, { vol: .028 });
+            bgmNext += .2; bgmStep++;
+          }
+        }, 150);
+      },
+      bgmStop() { clearInterval(bgmTimer); bgmTimer = 0; },
+      recTrack(mic) {
+        const a = ctx(); if (!a) return null;
+        if (!recDest) { recDest = a.createMediaStreamDestination(); master.connect(recDest); }
+        if (mic && mic !== micFor && mic.getAudioTracks().length) {
+          try { if (micSrc) micSrc.disconnect(); micSrc = a.createMediaStreamSource(mic); micSrc.connect(recDest); micFor = mic; } catch (e) {}
+        }
+        return recDest.stream.getAudioTracks()[0] || null;
+      },
+      set(v) { on = v; try { localStorage.setItem('xiaohe-sound', v ? 'on' : 'off'); } catch (e) {} if (master) master.gain.value = v ? .9 : 0; if (!v) S.bgmStop(); },
+      isOn: () => on
+    };
+    return S;
+  })();
+
+  // ---------- visual effect helpers ----------
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function flash(color) { if (reduced()) return; const f = $('flash'); f.style.background = color; f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+  function shake(el) { if (!el || reduced()) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 600); }
+  function floatText(text, el, cls) {
+    const r = el.getBoundingClientRect(); if (!r.width) return;
+    const d = document.createElement('div'); d.className = 'floater ' + (cls || ''); d.textContent = text;
+    d.style.left = (r.left + r.width / 2) + 'px'; d.style.top = (r.top + r.height / 2) + 'px';
+    document.body.appendChild(d); setTimeout(() => d.remove(), 1600);
+  }
+  const counters = new WeakMap();
+  function countTo(el, to) {
+    const from = counters.has(el) ? counters.get(el) : to; counters.set(el, to);
+    if (from === to || reduced()) { el.textContent = fmt(to); return; }
+    const t0 = performance.now(), dur = 700;
+    const step = (t) => {
+      if (counters.get(el) !== to) return;
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmt(Math.round(from + (to - from) * e));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  function heartRain(ms) {
+    if (reduced()) return;
+    const end = Date.now() + ms;
+    const iv = setInterval(() => { if (Date.now() > end) return clearInterval(iv); for (let i = 0; i < 3; i++) burst(1, { kind: 'heart', x: rand() * innerWidth, y: -20, fall: true }); }, 120);
+  }
+  function syncSnd() { $('sndBtn').setAttribute('aria-pressed', String(SFX.isOn())); $('sndBtn').textContent = SFX.isOn() ? '聲音 開' : '聲音 關'; }
+  $('sndBtn').addEventListener('click', () => { SFX.set(!SFX.isOn()); syncSnd(); if (SFX.isOn()) { SFX.blip(); if (scene === 'inside') SFX.bgmStart(); } });
+  syncSnd();
+
+  const poolOf = (t) => t.prizes.reduce((s, p) => s + p.amt * p.qty, 0);
+  const winsOf = (t) => t.prizes.reduce((s, p) => s + p.qty, 0);
+  const topOf = (t) => Math.max(0, ...t.prizes.map(p => p.amt));
+
+  // Play styles borrowed from real Taiwan scratch cards. Each ticket's layout is printed with it, and every
+  // layout pays out exactly the ticket's predetermined prize (one winning spot, or none).
+  const GAMES = {
+    match3: { name: '三個一樣', rule: '刮出三個相同金額，就贏得該金額' },
+    beat: { name: '贏過老闆', rule: '任一局「你的點數」大於「老闆點數」，就贏得該局獎金（平手不算）' },
+    numbers: { name: '幸運號碼', rule: '「你的號碼」跟任一個「幸運號碼」相同，就贏得該號碼下方的獎金；刮出「鶴」直接贏得該獎金' },
+    line: { name: '小鶴連線', rule: '三隻「鶴」連成一線（橫、直、斜都算），就贏得獎金區的金額' }
+  };
+  const ri = (a, b) => a + Math.floor(rand() * (b - a + 1));
+  const tease = (t) => [...new Set([...SYMBOLS.filter(v => v >= t.price && v <= t.price * 60), ...t.prizes.map(p => p.amt)])];
+  const LINES8 = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+  const SYMS = ['福', '財', '星', '心'];
+  const NINE = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+
+  function genMatch3(t, prize) {
+    const vals = [...new Set([...SYMBOLS, ...t.prizes.map(p => p.amt)])];
+    const bag = [];
+    for (const v of vals) if (v !== prize) bag.push(v, v);
+    shuffle(bag);
+    return { cells: shuffle(prize > 0 ? [prize, prize, prize, ...bag.slice(0, 6)] : bag.slice(0, 9)) };
+  }
+  function genBeat(t, prize) {
+    const amts = tease(t), w = prize > 0 ? ri(0, 2) : -1;
+    return { rounds: [0, 1, 2].map(i => {
+      if (i === w) { const boss = ri(2, 18); return { you: ri(boss + 1, 20), boss, amt: prize, win: true }; }
+      const you = ri(1, 18);
+      return { you, boss: ri(you, 20), amt: pickOne(amts), win: false };
+    }) };
+  }
+  function genNumbers(t, prize) {
+    const amts = tease(t);
+    const pool = shuffle(Array.from({ length: 30 }, (_, i) => i + 1));
+    const lucky = pool.slice(0, 2), others = pool.slice(2);
+    const w = prize > 0 ? ri(0, 5) : -1;
+    const spots = Array.from({ length: 6 }, (_, i) => i === w
+      ? { n: rand() < .3 ? '鶴' : lucky[ri(0, 1)], amt: prize, win: true }
+      : { n: others[i], amt: pickOne(amts), win: false });
+    return { lucky, spots };
+  }
+  function genLine(t, prize) {
+    let grid, line = null;
+    if (prize > 0) {
+      line = pickOne(LINES8);
+      grid = NINE.map(i => line.includes(i) ? '鶴' : pickOne(SYMS));
+      // a 4th crane can never complete a second line: two lines share at most one cell
+      if (rand() < .35) grid[pickOne(NINE.filter(i => !line.includes(i)))] = '鶴';
+    } else {
+      do {
+        grid = NINE.map(() => pickOne(SYMS));
+        shuffle([...NINE]).slice(0, ri(1, 3)).forEach(i => { grid[i] = '鶴'; });
+      } while (LINES8.some(l => l.every(i => grid[i] === '鶴')));
+    }
+    return { grid, line, amt: prize > 0 ? prize : pickOne(tease(t)) };
+  }
+  function genLayout(t, prize) {
+    return ({ match3: genMatch3, beat: genBeat, numbers: genNumbers, line: genLine })[t.game](t, prize);
+  }
+
+  // Every physical ticket exists from the moment the batch is printed; picking one from the table gets exactly that ticket.
+  function printBatch(config, batch, bonus) {
+    const tickets = [];
+    for (const t of config) {
+      const prizes = [];
+      for (const p of t.prizes) for (let i = 0; i < p.qty; i++) prizes.push(p.amt);
+      while (prizes.length < t.count) prizes.push(0);
+      shuffle(prizes).forEach((prize, i) => tickets.push({
+        id: `${t.id}-${batch}-${i + 1}`, type: t.id, no: i + 1, prize,
+        serial: `No. ${t.price}-${batch}-${String(i + 1).padStart(3, '0')}`,
+        layout: genLayout(t, prize), sold: false, revealed: false, at: 0
+      }));
+    }
+    // the lucky prize replaces one losing ticket of the most expensive kind
+    const top = config.reduce((a, t) => t.price > a.price ? t : a, config[0]);
+    const losers = tickets.filter(k => k.type === top.id && !k.prize);
+    const lucky = !!(bonus && bonus.amt > 0 && losers.length && rand() < bonus.chance);
+    if (lucky) { const k = pickOne(losers); k.prize = bonus.amt; k.layout = genLayout(top, bonus.amt); }
+    return { v: 7, coin: null, wallet: 0, brought: 0, config: clone(config), bonus: clone(bonus || { amt: 0, chance: 0 }), lucky, batch, tickets, spent: 0, won: 0, cashed: 0 };
+  }
+
+  let state, scene = 'front';
+  const selected = new Set();
+  const typeOf = (id) => state.config.find(t => t.id === id);
+  const byId = (id) => state.tickets.find(k => k.id === id);
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); return valid(s) ? s : null; } catch (e) { return null; } }
+  function valid(s) { return s && s.v === 7 && Array.isArray(s.config) && Array.isArray(s.tickets); }
+  const tilt = (id) => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) | 0; return ((Math.abs(h) % 9) - 4) * 0.9; };
+
+  function say(text) {
+    for (const b of [$('bubble')]) { b.textContent = text; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+    SFX.blip();
+  }
+
+  function settleText() {
+    const net = state.won - state.spent;
+    return net >= 0 ? `算帳：老闆要給你 NT$${fmt(net)}` : `算帳：你要給老闆 NT$${fmt(-net)}`;
+  }
+
+  // ---------- render ----------
+  function render() {
+    // virtual money: wallet = brought + won - spent, so the net is also wallet - brought
+    const net = state.won - state.spent;
+    countTo($('wBal'), state.wallet);
+    $('wIn').textContent = fmt(state.brought);
+    $('wNet').textContent = (net > 0 ? '+' : net < 0 ? '−' : '') + fmt(Math.abs(net));
+    $('wNetBox').classList.toggle('neg', net < 0);
+    $('frontHint').textContent = state.brought ? `錢包裡還有 NT$${fmt(state.wallet)} · 點門走進店裡` : '叮咚～ 點門或按鈕走進店裡';
+    const allDone = state.tickets.every(k => k.revealed);
+    $('endCard').hidden = !allDone;
+    if (allDone) {
+      const c = state.coin;
+      $('endNote').textContent = !c ? '老闆有話跟你說' : c.done ? settleText() : '殘酷遊戲還沒結束';
+      $('endBtn').textContent = !c ? '打開' : c.done ? '看結果' : '繼續丟硬幣';
+    }
+
+    // no prize amounts anywhere on the shop floor: what's inside stays a surprise
+    $('zones').innerHTML = state.config.map(t => {
+      const mine = state.tickets.filter(k => k.type === t.id);
+      const remain = mine.filter(k => !k.sold).length;
+      const slots = mine.map(k => k.sold
+        ? `<span class="gone-slot" style="--r:${tilt(k.id)}deg">已售出</span>`
+        : `<button class="mini" type="button" data-t="${t.id}" data-id="${k.id}" style="--r:${tilt(k.id)}deg;--i:${k.no}" aria-pressed="${selected.has(k.id)}" aria-label="${t.name} ${t.price}元 ${k.serial}">
+             <span class="m-top">${t.name}</span><span class="m-price">${t.price}</span><span class="m-foil"></span><span class="m-no">${String(k.no).padStart(3, '0')}</span></button>`).join('');
+      return `<div class="zone" data-t="${t.id}">
+        <div class="tent"><b>${t.price}元</b><strong style="font-weight:400">${t.name}</strong><span>玩法：${GAMES[t.game].name} · 桌上剩 ${remain} 張</span></div>
+        ${remain ? '' : '<div class="soldout">已售完</div>'}
+        <div class="spread">${slots}</div></div>`;
+    }).join('');
+
+    renderBar();
+  }
+  function renderBar() {
+    const picks = [...selected].map(byId).filter(Boolean);
+    const sum = picks.reduce((s, k) => s + typeOf(k.type).price, 0);
+    $('selInfo').innerHTML = picks.length ? `挑了 ${picks.length} 張 · <b>NT$${fmt(sum)}</b>` : '點桌上的彩券來挑';
+    $('checkout').disabled = !picks.length;
+    const fresh = state.tickets.filter(k => k.sold && !k.revealed).length;
+    $('mineBadge').hidden = !fresh; $('mineBadge').textContent = fresh;
+  }
+
+  $('zones').addEventListener('click', (e) => {
+    const b = e.target.closest('.mini'); if (!b) return;
+    const id = b.dataset.id;
+    if (selected.has(id)) { selected.delete(id); b.setAttribute('aria-pressed', 'false'); SFX.unpick(); if (rand() < .5) say(pickOne(LINES.unpick)); }
+    else {
+      selected.add(id); b.setAttribute('aria-pressed', 'true'); SFX.pick(); say(pickOne(LINES.pick));
+      const r = b.getBoundingClientRect(); burst(10, { kind: 'star', x: r.left + r.width / 2, y: r.top + r.height / 2, power: .45 });
+    }
+    renderBar();
+  });
+
+  // ---------- walking in / out ----------
+  let entering = false;
+  function enter() {
+    if (entering) return;
+    if (!state.brought) { openBring('enter'); return; }
+    walkIn();
+  }
+  function walkIn() {
+    if (entering) return; entering = true;
+    SFX.chime(); SFX.door(); setTimeout(SFX.sparkle, 450);
+    const reduce = reduced();
+    $('front').classList.add('entering');
+    const dr = $('doorBtn').getBoundingClientRect();
+    setTimeout(() => burst(50, { kind: 'star', x: dr.left + dr.width / 2, y: dr.top + dr.height / 2, power: .9 }), 250);
+    setTimeout(() => $('whiteout').classList.add('on'), reduce ? 0 : 750);
+    setTimeout(() => {
+      showScene('inside');
+      $('zones').classList.add('dealing');
+      setTimeout(() => $('zones').classList.remove('dealing'), 2600);
+      SFX.bgmStart();
+      say('歡迎光臨小鶴彩券行～桌上的刮刮樂隨便挑，挑好拿來結帳。');
+      entering = false;
+    }, reduce ? 50 : 1250);
+    setTimeout(() => $('whiteout').classList.remove('on'), reduce ? 60 : 1900);
+  }
+  function showScene(s) {
+    scene = s;
+    if (s === 'front') SFX.bgmStop();
+    $('front').hidden = s !== 'front';
+    $('inside').hidden = s !== 'inside';
+    $('front').classList.remove('entering');
+    window.scrollTo(0, 0);
+  }
+  $('doorBtn').addEventListener('click', enter);
+  $('enterBtn').addEventListener('click', enter);
+  $('goOut').addEventListener('click', () => { camStop(); showScene('front'); });
+
+  // ---------- bringing money in ----------
+  let bringMode = 'enter', bringThen = null;
+  function openBring(mode, then) {
+    bringMode = mode; bringThen = then || null;
+    $('bringTitle').textContent = mode === 'enter' ? '今天帶多少錢來刮？' : '要再拿多少錢出來？';
+    $('bringSub').textContent = mode === 'enter' ? '店裡用的是虛擬錢。刮完以後，再跟老闆用現金算差額。' : '會加進錢包，最後一起跟老闆算。';
+    $('bringOk').textContent = mode === 'enter' ? '帶著錢進去' : '放進錢包';
+    $('bringIn').value = mode === 'enter' ? 1000 : 500;
+    $('bringErr').hidden = true;
+    markChip();
+    $('bringOv').hidden = false;
+    $('bringIn').focus();
+  }
+  function markChip() { for (const b of $('bringChips').children) b.setAttribute('aria-pressed', String(+b.dataset.v === +$('bringIn').value)); }
+  $('bringChips').addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (!b) return; $('bringIn').value = b.dataset.v; markChip(); });
+  $('bringIn').addEventListener('input', markChip);
+  $('bringCancel').addEventListener('click', () => { $('bringOv').hidden = true; });
+  $('bringForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = Math.floor(+$('bringIn').value || 0);
+    if (v < 10 || v > 100000) { $('bringErr').textContent = '請輸入 10 到 100,000 之間的金額。'; $('bringErr').hidden = false; return; }
+    state.brought += v; state.wallet += v;
+    SFX.coinDrop();
+    if (!$('inside').hidden) floatText(`+NT$${fmt(v)}`, $('wBal'), 'plus');
+    save(); render();
+    $('bringOv').hidden = true;
+    if (bringMode === 'enter') { if (state.introAsked) walkIn(); else openIntro(); }
+    else { say(`錢包多了 NT$${fmt(v)}，繼續挑吧`); if (bringThen) bringThen(); }
+  });
+  $('addMoney').addEventListener('click', () => openBring('add'));
+
+  // ---------- checkout ----------
+  $('checkout').addEventListener('click', () => {
+    const picks = [...selected].map(byId).filter(k => k && !k.sold);
+    if (!picks.length) return;
+    const groups = state.config.map(t => ({ t, n: picks.filter(k => k.type === t.id).length })).filter(g => g.n);
+    const sum = groups.reduce((s, g) => s + g.n * g.t.price, 0);
+    $('payLines').innerHTML = groups.map(g => `<tr><td>${g.t.price} 元 ${g.t.name}</td><td>× ${g.n}</td><td>${fmt(g.n * g.t.price)}</td></tr>`).join('')
+      + `<tr class="tot"><td>合計</td><td></td><td>NT$${fmt(sum)}</td></tr>`;
+    const short = sum - state.wallet;
+    $('payBubble').textContent = short > 0 ? `總共 NT$${fmt(sum)}，錢包不夠喔，還差 NT$${fmt(short)}。` : `總共 NT$${fmt(sum)}，從錢包扣。`;
+    $('payAfter').textContent = short > 0 ? `錢包只有 NT$${fmt(state.wallet)}` : `錢包 NT$${fmt(state.wallet)} → 付完剩 NT$${fmt(state.wallet - sum)}`;
+    $('payAfter').classList.toggle('short', short > 0);
+    $('payOk').textContent = short > 0 ? '再拿錢出來' : `從錢包付 NT$${fmt(sum)}`;
+    $('payOk').dataset.mode = short > 0 ? 'add' : 'pay';
+    $('payOv').hidden = false;
+    $('payOk').focus();
+  });
+  $('payCancel').addEventListener('click', () => { $('payOv').hidden = true; });
+  $('payOk').addEventListener('click', () => {
+    if ($('payOk').dataset.mode === 'add') { $('payOv').hidden = true; openBring('add', () => $('checkout').click()); return; }
+    const picks = [...selected].map(byId).filter(k => k && !k.sold);
+    const sum = picks.reduce((s2, k) => s2 + typeOf(k.type).price, 0);
+    if (sum > state.wallet) return;
+    const now = Date.now();
+    picks.forEach((k, i) => { k.sold = true; k.at = now + i; state.spent += typeOf(k.type).price; });
+    state.wallet -= sum;
+    SFX.register();
+    floatText(`−NT$${fmt(sum)}`, $('wBal'), 'minus');
+    selected.clear();
+    save(); render();
+    $('payOv').hidden = true;
+    say(pickOne(LINES.paid));
+    if (picks[0]) openTicket(picks[0].id);
+  });
+
+  // ---------- my tickets ----------
+  function renderMine() {
+    const list = state.tickets.filter(k => k.sold).sort((a, b) => b.at - a.at);
+    $('mineEmpty').hidden = list.length > 0;
+    $('mylist').innerHTML = list.map(k => {
+      const t = typeOf(k.type);
+      const pill = !k.revealed ? '<span class="pill new">還沒刮</span>' : k.prize > 0 ? `<span class="pill win">中 ${fmt(k.prize)}</span>` : '<span class="pill lose">沒中</span>';
+      return `<button class="tk" type="button" data-t="${k.type}" data-id="${k.id}"><span class="chip"></span>
+        <span class="meta"><span>${t.name}</span><small>${k.serial}</small></span>${pill}</button>`;
+    }).join('');
+  }
+  $('mineBtn').addEventListener('click', () => { renderMine(); $('mineOv').hidden = false; });
+  $('mineClose').addEventListener('click', () => { $('mineOv').hidden = true; });
+  $('mylist').addEventListener('click', (e) => {
+    const b = e.target.closest('.tk'); if (!b) return;
+    $('mineOv').hidden = true; openTicket(b.dataset.id);
+  });
+
+  // ---------- scratching ----------
+  let cur = null, foils = [];
+  const nextFresh = () => state.tickets.filter(k => k.sold && !k.revealed && (!cur || k.id !== cur.id)).sort((a, b) => a.at - b.at)[0];
+  const SYM_CLASS = { '鶴': 'he', '福': 'fu', '財': 'cai', '星': 'xing', '心': 'xin' };
+  const sym = (s) => s === '鶴'
+    ? '<span class="sym s-he" aria-label="鶴"><svg aria-hidden="true"><use href="#crane"/></svg></span>'
+    : `<span class="sym s-${SYM_CLASS[s]}">${s}</span>`;
+  const zone = (inner, cls = '', attr = '') => `<div class="sz ${cls}" ${attr}>${inner}<canvas aria-label="刮刮區，用手指或滑鼠刮開"></canvas></div>`;
+
+  function renderGame(k) {
+    const g = k.layout;
+    switch (typeOf(k.type).game) {
+      case 'match3':
+        return `<div class="lab"><span>刮刮區</span></div>` + zone(`<div class="grid3">${g.cells.map(v =>
+          `<div class="cell" ${k.prize > 0 && v === k.prize ? 'data-win' : ''}><span class="n">${fmt(v)}</span><span class="u">元</span></div>`).join('')}</div>`);
+      case 'beat':
+        return `<div class="beat-head"><span></span><span>你的點數</span><span>老闆點數</span><span>獎金</span></div>` +
+          g.rounds.map((r, i) => `<div class="beat-row"><span class="lbl">第${'一二三'[i]}局</span>${zone(
+            `<span>${r.you}</span><span>${r.boss}</span><span>${fmt(r.amt)}元</span>`, '', r.win ? 'data-win' : '')}</div>`).join('');
+      case 'numbers':
+        return `<div class="lab"><span>幸運號碼</span></div>` +
+          zone(`<div class="win-nums">${g.lucky.map(n => `<div class="cell"><span class="n">${n}</span></div>`).join('')}</div>`) +
+          `<div class="lab"><span>你的號碼</span><span>號碼下方是獎金</span></div>` +
+          zone(`<div class="your-nums">${g.spots.map(s => `<div class="cell" ${s.win ? 'data-win' : ''}>
+            <span class="n">${s.n === '鶴' ? sym('鶴') : s.n}</span><span class="a">${fmt(s.amt)}元</span></div>`).join('')}</div>`);
+      case 'line':
+        return `<div class="line-wrap"><div><div class="lab"><span>遊戲區</span></div>` +
+          zone(`<div class="grid3">${g.grid.map((s, i) => `<div class="cell" ${g.line && g.line.includes(i) ? 'data-win' : ''}>${sym(s)}</div>`).join('')}</div>`) +
+          `</div><div><div class="lab"><span>獎金區</span></div>` +
+          zone(`<div class="prizebox"><span class="n">${fmt(g.amt)}</span><span class="u">元</span></div>`, 'tall', g.line ? 'data-win' : '') +
+          `</div></div>`;
+    }
+    return '';
+  }
+
+  function openTicket(id) {
+    const k = byId(id); if (!k) return;
+    const t = typeOf(k.type);
+    cur = k;
+    const tk = $('ticket');
+    tk.dataset.t = k.type;
+    tk.classList.toggle('done', k.revealed);
+    tk.classList.remove('mega', 'shake'); $('scratchOv').classList.remove('mega-bg'); $('stamp').hidden = true;
+    SFX.pick();
+    $('tShop').textContent = `小鶴彩券行 · 玩法：${GAMES[t.game].name}`;
+    $('tName').textContent = t.name;
+    $('tPrice').innerHTML = `${t.price}<small>元</small>`;
+    $('tRule').textContent = GAMES[t.game].rule;
+    $('tSerial').textContent = k.serial;
+    $('game').innerHTML = renderGame(k);
+    foils = [...$('game').querySelectorAll('canvas')].map(c => ({ c, ctx: c.getContext('2d', { willReadFrequently: true }), done: false, drawing: false, last: null, strokes: 0 }));
+    $('scratchOv').hidden = false;
+    if (k.revealed) { foils.forEach(f => f.c.classList.add('gone')); showResult(k, false); return; }
+    $('result').className = 'result';
+    $('result').innerHTML = '<span class="r1">拿銅板把銀色的地方都刮開</span>';
+    $('revealAll').hidden = false;
+    $('nextTk').hidden = true;
+    foils.forEach(bindFoil);
+    requestAnimationFrame(() => foils.forEach(paintFoil));
+  }
+
+  function paintFoil(f) {
+    const r = f.c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    f.c.width = Math.round(r.width * dpr); f.c.height = Math.round(r.height * dpr);
+    const x = f.ctx;
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.globalCompositeOperation = 'source-over';
+    const css = getComputedStyle(document.documentElement);
+    const g = x.createLinearGradient(0, 0, r.width, r.height);
+    g.addColorStop(0, css.getPropertyValue('--foil-a').trim()); g.addColorStop(.5, css.getPropertyValue('--foil-b').trim()); g.addColorStop(1, css.getPropertyValue('--foil-a').trim());
+    x.fillStyle = g; x.fillRect(0, 0, r.width, r.height);
+    for (let i = 0; i < r.width * r.height / 90; i++) {
+      x.fillStyle = rand() < .5 ? 'rgba(255,255,255,.35)' : 'rgba(80,78,100,.18)';
+      x.fillRect(rand() * r.width, rand() * r.height, 1.5, 1.5);
+    }
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = 'rgba(70,66,100,.16)';
+    x.font = `16px ${css.getPropertyValue('--num')}`;
+    for (let y = 14; y < r.height; y += 30) for (let xx = (Math.round(y / 30) % 2) ? 16 : 36; xx < r.width; xx += 40) x.fillText('$', xx, y);
+    x.fillStyle = 'rgba(40,36,70,.55)';
+    x.font = `${Math.max(13, Math.min(22, r.height * .28))}px ${css.getPropertyValue('--body')}`;
+    x.fillText(r.height > 80 ? '小鶴 · 刮開這裡' : '刮開', r.width / 2, r.height / 2);
+  }
+  function bindFoil(f) {
+    const pos = (e) => { const r = f.c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    f.c.addEventListener('pointerdown', (e) => {
+      if (!cur || cur.revealed || f.done) return;
+      f.drawing = true; f.last = pos(e); f.c.setPointerCapture(e.pointerId); scratch(f, f.last);
+    });
+    f.c.addEventListener('pointermove', (e) => { if (f.drawing) scratch(f, pos(e)); });
+    const stop = () => { if (f.drawing) { f.drawing = false; check(f); } };
+    f.c.addEventListener('pointerup', stop);
+    f.c.addEventListener('pointercancel', stop);
+  }
+  function scratch(f, p) {
+    const x = f.ctx;
+    x.globalCompositeOperation = 'destination-out';
+    x.lineWidth = 32; x.lineCap = 'round'; x.lineJoin = 'round';
+    x.beginPath(); x.moveTo(f.last.x, f.last.y); x.lineTo(p.x + .01, p.y); x.stroke();
+    f.last = p;
+    SFX.scratch();
+    if (f.strokes % 2 === 0) { const r = f.c.getBoundingClientRect(); burst(2, { kind: 'flake', x: r.left + p.x, y: r.top + p.y, power: .35 }); }
+    if (++f.strokes % 6 === 0) check(f);
+  }
+  function check(f) {
+    const { width: w, height: h } = f.c; if (!w || !h || f.done) return;
+    const d = f.ctx.getImageData(0, 0, w, h).data;
+    let clear = 0, n = 0;
+    for (let y = 0; y < h; y += 8) for (let xx = 0; xx < w; xx += 8) { n++; if (d[(y * w + xx) * 4 + 3] < 40) clear++; }
+    if (clear / n > .55) {
+      f.done = true; f.drawing = false; f.c.classList.add('gone');
+      if (foils.every(o => o.done)) finish(); else SFX.reveal();
+    }
+  }
+
+  function finish() {
+    if (!cur || cur.revealed) return;
+    foils.forEach(f => { f.done = true; f.drawing = false; f.c.classList.add('gone'); });
+    cur.revealed = true;
+    if (cur.prize > 0) { state.won += cur.prize; state.wallet += cur.prize; }
+    save(); render();
+    $('ticket').classList.add('done');
+    showResult(cur, true);
+    celebrate(cur);
+    say(pickOne(cur.prize > 0 ? LINES.win : LINES.lose));
+    if (state.tickets.every(k => k.revealed)) setTimeout(showFinale, 1600);
+  }
+  // win tiers: small (<200), mid (200+), big (1,000+) each get louder sound and bigger effects
+  function celebrate(k) {
+    const tk = $('ticket');
+    if (k.prize >= 1000) {
+      SFX.winBig(); flash('rgba(255,216,74,.9)'); shake(tk);
+      tk.classList.add('mega'); $('scratchOv').classList.add('mega-bg');
+      burst(160); setTimeout(() => burst(120, { kind: 'star', power: 1.4 }), 900); setTimeout(() => burst(160), 1100);
+    } else if (k.prize >= 200) {
+      SFX.winMid(); flash('rgba(255,216,74,.7)'); shake(tk); burst(120); burst(40, { kind: 'star' });
+    } else if (k.prize > 0) {
+      SFX.winSmall(); burst(60); burst(20, { kind: 'star', power: .7 });
+    } else SFX.lose();
+    if (k.prize > 0) { floatText(`+NT$${fmt(k.prize)}`, $('result'), 'plus'); autoRecord(k); }
+  }
+  function stampFor(k, fresh) {
+    const st = $('stamp');
+    st.textContent = k.prize >= 1000 ? '大獎' : k.prize > 0 ? '中獎' : '銘謝惠顧';
+    st.className = 'stamp ' + (k.prize >= 1000 ? 'big' : k.prize > 0 ? 'win' : 'lose');
+    st.hidden = false;
+    if (fresh && !reduced()) { void st.offsetWidth; st.classList.add('go'); setTimeout(SFX.stamp, 120); }
+  }
+  function showFinale() {
+    const net = state.won - state.spent;
+    $('finTitle').textContent = `淨賺 NT$${fmt(net)}`;
+    if (state.lucky) {
+      $('finK').textContent = '你把幸運大獎刮出來了';
+      $('fin520').hidden = false;
+      $('fin520').textContent = '一萬元，全部給你';
+      $('finMsg').textContent = '今天最大的獎被你抽到了，但我最大的獎是你。我愛你';
+    } else {
+      $('finK').textContent = '整桌刮刮樂都被你刮完了';
+      $('fin520').hidden = net !== 5200;
+      $('fin520').textContent = '5200，就是我愛你';
+      $('finMsg').textContent = '沒關係，不是最大獎，但是我愛你';
+    }
+    $('finStats').textContent = `刮了 ${state.tickets.length} 張 · 帶進來 NT$${fmt(state.brought)} · 錢包剩 NT$${fmt(state.wallet)}`;
+    $('scratchOv').hidden = true; cur = null;
+    $('finaleOv').hidden = false;
+    $('finCoin').focus();
+    burst(180, true); SFX.love(); heartRain(5000);
+    say('全部刮完了！老闆有話跟你說');
+  }
+  $('finKeep').addEventListener('click', () => {
+    if (!state.coin) { const net = state.won - state.spent; state.coin = { base: net, amount: net, flips: [], done: true, paying: false }; }
+    save(); render();
+    $('finaleOv').hidden = true; burst(90, true); SFX.love(); heartRain(3000);
+    say('收下了！我愛你');
+  });
+  $('finCoin').addEventListener('click', () => {
+    if (!state.coin) { const net = state.won - state.spent; state.coin = { base: net, amount: net, flips: [], done: false, paying: false }; }
+    save(); render();
+    $('finaleOv').hidden = true;
+    openCoin();
+  });
+  $('endBtn').addEventListener('click', () => { if (state.coin) openCoin(); else showFinale(); });
+
+  // ---------- the cruel coin game ----------
+  // Each flip is decided and saved before the coin spins, so reloading can't re-roll it.
+  // Prize changes go into state.won and retry fees into state.spent, so the ledger stays honest.
+  const FEE = 500;
+  let coinRot = 0, flipping = false;
+  function setCoin(deg, animate) {
+    const el = $('coin3d');
+    if (!animate) { el.style.transition = 'none'; el.style.transform = `rotateY(${deg}deg)`; void el.offsetWidth; el.style.transition = ''; }
+    else el.style.transform = `rotateY(${deg}deg)`;
+    coinRot = deg;
+  }
+  function openCoin() {
+    const last = state.coin.flips[state.coin.flips.length - 1];
+    setCoin(last && !last.heads ? 180 : 0, false);
+    renderCoin();
+    $('coinOv').hidden = false;
+  }
+  function renderCoin() {
+    const c = state.coin, last = c.flips[c.flips.length - 1];
+    const fees = c.flips.reduce((s, f) => s + f.fee, 0);
+    $('coinAmt').textContent = 'NT$' + fmt(c.amount);
+    $('coinLog').innerHTML = c.flips.map((f, i) => `<li>第 ${i + 1} 次 · ${f.heads ? '正面，翻倍' : '反面，減半'} · ${fmt(f.from)} → ${fmt(f.to)}${f.fee ? ` · 付了 ${f.fee} 元` : ' · 免費'}</li>`).join('');
+    let msg, btns;
+    if (c.done) {
+      msg = last && last.heads ? `翻倍成功！最後拿到 NT$${fmt(c.amount)}，我愛你`
+        : c.amount === c.base ? `收下 NT$${fmt(c.amount)}，我愛你`
+        : `最後拿到 NT$${fmt(c.amount)}。錢會減半，但我愛你不會減半`;
+      if (fees) msg += `（丟硬幣付了 NT$${fmt(fees)}）`;
+      msg += `。${settleText()}`;
+      btns = '<button class="btn y" type="button" data-c="close">關閉</button>';
+    } else if (!last) {
+      msg = '第一次免費。準備好了嗎？';
+      btns = `<button class="btn ghost" type="button" data-c="keep">不玩了，收下 NT$${fmt(c.amount)}</button><button class="btn y" type="button" data-c="flip">丟硬幣（免費）</button>`;
+    } else if (c.paying) {
+      msg = `從錢包付 NT$${FEE}，付完剩 NT$${fmt(state.wallet - FEE)}。`;
+      btns = `<button class="btn ghost" type="button" data-c="unpay">算了</button><button class="btn y" type="button" data-c="flip">付 ${FEE}，丟！</button>`;
+    } else if (state.wallet < FEE) {
+      msg = `反面……獎金減半，剩 NT$${fmt(c.amount)}。錢包只剩 NT$${fmt(state.wallet)}，要再丟得先拿錢出來。`;
+      btns = `<button class="btn ghost" type="button" data-c="keep">收下 NT$${fmt(c.amount)}</button><button class="btn y" type="button" data-c="add">再拿錢出來</button>`;
+    } else {
+      msg = `反面……獎金減半，剩 NT$${fmt(c.amount)}。要付 ${FEE} 元再丟一次嗎？`;
+      btns = `<button class="btn ghost" type="button" data-c="keep">收下 NT$${fmt(c.amount)}</button><button class="btn y" type="button" data-c="pay">付 ${FEE} 元再丟一次</button>`;
+    }
+    $('coinMsg').textContent = msg;
+    $('coinBtns').innerHTML = btns;
+    $('coinLater').hidden = c.done;
+  }
+  function flip() {
+    const c = state.coin;
+    if (flipping || c.done) return;
+    const fee = c.flips.length ? FEE : 0;
+    const heads = rand() < .5;
+    const from = c.amount, to = heads ? from * 2 : Math.round(from / 2);
+    c.flips.push({ heads, from, to, fee });
+    c.amount = to; c.paying = false;
+    if (heads) c.done = true;
+    state.won += to - from;
+    state.spent += fee;
+    state.wallet += to - from - fee;
+    save(); render();
+    flipping = true;
+    $('coinBtns').innerHTML = ''; $('coinLater').hidden = true;
+    $('coinMsg').textContent = '硬幣飛起來了……';
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setCoin(Math.ceil((coinRot + 1800) / 360) * 360 + (heads ? 0 : 180), !reduce);
+    SFX.flipStart();
+    if (fee) floatText(`−NT$${fmt(fee)}`, $('coinAmt'), 'minus');
+    setTimeout(() => {
+      flipping = false;
+      renderCoin();
+      SFX.flipLand(); shake(document.querySelector('.coinbox'));
+      const cr = $('coin3d').getBoundingClientRect(), mx = cr.left + cr.width / 2, my = cr.top + cr.height / 2;
+      if (heads) {
+        setTimeout(SFX.winBig, 150); flash('rgba(255,216,74,.85)');
+        burst(200, true); burst(70, { kind: 'star', x: mx, y: my, power: 1.2 });
+        say('翻倍了！老闆的錢包在哭');
+      } else { setTimeout(SFX.lose, 150); flash('rgba(30,20,50,.6)'); say('反面……要不要再拚一次？'); }
+    }, reduce ? 0 : 1700);
+  }
+  $('coinBtns').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-c]'); if (!b || flipping) return;
+    const c = state.coin, act = b.dataset.c;
+    if (act === 'flip') flip();
+    else if (act === 'pay') { c.paying = true; renderCoin(); }
+    else if (act === 'add') openBring('add', renderCoin);
+    else if (act === 'unpay') { c.paying = false; renderCoin(); }
+    else if (act === 'keep') { c.done = true; save(); render(); renderCoin(); burst(90, true); SFX.love(); heartRain(3000); }
+    else if (act === 'close') $('coinOv').hidden = true;
+  });
+  $('coinLater').addEventListener('click', () => { if (!flipping) $('coinOv').hidden = true; });
+  function showResult(k, fresh) {
+    $('revealAll').hidden = true;
+    $('nextTk').hidden = !nextFresh();
+    const r = $('result');
+    if (k.prize > 0) {
+      r.className = 'result win';
+      const has = clips.some(c => c.ticketId === k.id);
+      r.innerHTML = `<span class="r1">中獎了！獎金已經放進錢包</span><span class="r2">NT$${fmt(k.prize)}</span>` +
+        (live() ? '' : `<button class="btn y rec-btn" type="button" data-rec>${has ? '再錄一次反應' : '錄 10 秒反應'}</button>`);
+      stampFor(k, fresh);
+    } else {
+      r.className = 'result';
+      r.innerHTML = '<span class="r1">銘謝惠顧</span><span class="r2" style="font-size:20px">下一張一定中</span>';
+      stampFor(k, fresh);
+    }
+  }
+  $('revealAll').addEventListener('click', finish);
+  $('nextTk').addEventListener('click', () => { const n = nextFresh(); if (n) openTicket(n.id); });
+  $('closeScratch').addEventListener('click', () => { $('scratchOv').hidden = true; cur = null; });
+
+  // ---------- owner's back office ----------
+  let draft, draftBonus, armed = false;
+  function openBoss() {
+    draft = clone(state.config); draftBonus = clone(state.bonus || DEFAULT_BONUS);
+    $('bonusAmt').value = draftBonus.amt; $('bonusPct').value = Math.round(draftBonus.chance * 100);
+    disarm(); renderLedger(); renderEditor(); $('bossOv').hidden = false;
+  }
+  $('bonusAmt').addEventListener('input', (e) => { draftBonus.amt = Math.max(0, Math.floor(+e.target.value || 0)); disarm(); sums(); });
+  $('bonusPct').addEventListener('input', (e) => { draftBonus.chance = Math.min(100, Math.max(0, +e.target.value || 0)) / 100; disarm(); sums(); });
+  function renderLedger() {
+    $('batchTag').textContent = `目前是第 ${state.batch} 批` + (state.lucky ? `（這批藏了 NT$${fmt(state.bonus.amt)} 幸運大獎）` : '（這批沒有幸運大獎）');
+    let sold = 0, rev = 0, paid = 0;
+    const rows = state.config.map(t => {
+      const mine = state.tickets.filter(k => k.type === t.id);
+      const s = mine.filter(k => k.sold).length, r = s * t.price;
+      const out = mine.filter(k => k.revealed).reduce((a, k) => a + k.prize, 0);
+      sold += s; rev += r; paid += out;
+      return `<tr><td>${t.price} 元 ${t.name}</td><td>${s} / ${t.count}</td><td>${fmt(r)}</td><td>${fmt(out)}</td><td>${fmt(r - out)}</td></tr>`;
+    }).join('');
+    $('ledger').innerHTML = `<thead><tr><th>種類</th><th>賣出</th><th>收入</th><th>開出獎金</th><th>老闆淨賺</th></tr></thead>
+      <tbody>${rows}<tr class="tot"><td>合計</td><td>${sold}</td><td>${fmt(rev)}</td><td>${fmt(paid)}</td><td>${fmt(rev - paid)}</td></tr></tbody>`;
+    const net = state.won - state.spent;
+    $('owe').textContent = 'NT$' + fmt(Math.abs(net));
+    $('oweK').textContent = net >= 0 ? '最後算帳：你要給她' : '最後算帳：她要給你';
+    $('oweNote').textContent = `她帶進來 NT$${fmt(state.brought)}，錢包現在 NT$${fmt(state.wallet)}`;
+  }
+  function renderEditor() {
+    $('editor').innerHTML = draft.map((t, ti) => `
+      <div class="ed" data-ti="${ti}">
+        <div class="ed-head"><span>${t.price} 元 · ${t.name}</span>
+          <label>總張數 <input id="cnt-${ti}" type="number" min="1" max="120" step="1" inputmode="numeric" value="${t.count}" data-f="count"></label></div>
+        <table>${t.prizes.map((p, pi) => `<tr>
+          <td><label>獎金 <input id="amt-${ti}-${pi}" type="number" min="1" step="1" inputmode="numeric" value="${p.amt}" data-f="amt" data-pi="${pi}"></label></td>
+          <td><label>× <input id="qty-${ti}-${pi}" type="number" min="0" step="1" inputmode="numeric" value="${p.qty}" data-f="qty" data-pi="${pi}"> 張</label></td>
+          <td><button class="x" type="button" data-del="${pi}" aria-label="刪除這一行">×</button></td></tr>`).join('')}</table>
+        <button class="add" type="button" data-add>＋ 加一種獎金</button>
+        <div class="sum" id="sum-${ti}"></div>
+      </div>`).join('');
+    sums();
+  }
+  function sums() {
+    let grand = 0, ok = true, sales = 0;
+    draft.forEach((t, ti) => {
+      const pool = poolOf(t), wins = winsOf(t);
+      grand += pool; sales += t.count * t.price;
+      const el = $('sum-' + ti);
+      if (wins > t.count) { ok = false; el.className = 'sum err'; el.textContent = `中獎張數 ${wins} 超過總張數 ${t.count}，請減少中獎張數或增加總張數`; }
+      else { el.className = 'sum'; el.textContent = `獎金 NT$${fmt(pool)} · 中獎率 ${Math.round(wins / t.count * 100)}% · 全賣完收 NT$${fmt(t.count * t.price)}`; }
+    });
+    const net = grand - sales;
+    $('grand').textContent = 'NT$' + fmt(net);
+    $('grandNote').textContent = `全部賣完老闆收 NT$${fmt(sales)}，開出獎金 NT$${fmt(grand)}。`
+      + (draftBonus.amt > 0 && draftBonus.chance > 0 ? `有 ${Math.round(draftBonus.chance * 100)}% 的機會藏幸運大獎，那一批她淨賺 NT$${fmt(net + draftBonus.amt)}。` : '');
+    $('reprint').disabled = !ok;
+    return ok;
+  }
+  $('editor').addEventListener('input', (e) => {
+    const inp = e.target, box = inp.closest('.ed'); if (!box) return;
+    const t = draft[+box.dataset.ti], v = Math.max(0, Math.floor(+inp.value || 0));
+    if (inp.dataset.f === 'count') t.count = Math.min(120, Math.max(1, v));
+    else t.prizes[+inp.dataset.pi][inp.dataset.f] = v;
+    disarm(); sums();
+  });
+  $('editor').addEventListener('click', (e) => {
+    const box = e.target.closest('.ed'); if (!box) return;
+    const t = draft[+box.dataset.ti];
+    if (e.target.closest('[data-del]')) { t.prizes.splice(+e.target.closest('[data-del]').dataset.del, 1); disarm(); renderEditor(); }
+    else if (e.target.closest('[data-add]')) { t.prizes.push({ amt: t.price, qty: 1 }); disarm(); renderEditor(); }
+  });
+  function disarm() { armed = false; $('reprint').textContent = '印新一批'; }
+  $('reprint').addEventListener('click', () => {
+    if (!sums()) return;
+    if (!armed) { armed = true; $('reprint').textContent = '確定？桌上彩券和帳目會全部清空'; return; }
+    const cfg = draft.map(t => ({ ...t, prizes: t.prizes.filter(p => p.amt > 0 && p.qty > 0) }));
+    const next = state.batch === 'Z' ? 'A' : String.fromCharCode(state.batch.charCodeAt(0) + 1);
+    state = printBatch(cfg, next, draftBonus);
+    selected.clear();
+    save(); render(); disarm();
+    $('bossOv').hidden = true;
+    say('新的一批刮刮樂擺上桌了！');
+  });
+  $('bossOpen').addEventListener('click', openBoss);
+  $('bossClose').addEventListener('click', () => { $('bossOv').hidden = true; });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    for (const [ov, btn] of [['vidOv', 'vidClose'], ['camOv', 'camSkip'], ['bringOv', 'bringCancel'], ['bossOv', 'bossClose'], ['payOv', 'payCancel'], ['mineOv', 'mineClose'], ['scratchOv', 'closeScratch']])
+      if (!$(ov).hidden) { $(btn).click(); return; }
+  });
+
+  // ---------- camera ----------
+  // The page runs the front camera itself. The opening speech records 15 s on a live preview; every win records
+  // 10 s in the background in a small picture-in-picture bubble. Frames are drawn onto a canvas with the prize
+  // banner and recorded together with the mic and the game's own sound, so each clip already shows what she won.
+  // Without camera permission it falls back to the phone's camera app (file input) and burns the banner in later.
+  const camInput = $('camInput'), memClips = new Map();
+  let clips = [], camPending = null, toastTimer = 0, saving = false, pipGen = 0, introBusy = false;
+  const urls = [];
+  const CAM = { stream: null, enabled: true, active: null };
+  try { CAM.enabled = localStorage.getItem('xiaohe-cam') !== 'off'; } catch (e) {}
+
+  function toast(text, sticky) {
+    clearTimeout(toastTimer);
+    $('toast').textContent = text; $('toast').hidden = false;
+    if (!sticky) toastTimer = setTimeout(() => { $('toast').hidden = true; }, 3200);
+  }
+  function idb() {
+    return new Promise((res, rej) => {
+      try {
+        const r = indexedDB.open('xiaohe-clips', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('clips', { keyPath: 'id' });
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+      } catch (e) { rej(e); }
+    });
+  }
+  async function idbDo(mode, fn) {
+    const db = await idb();
+    return new Promise((res, rej) => {
+      const tx = db.transaction('clips', mode), req = fn(tx.objectStore('clips'));
+      tx.oncomplete = () => res(req && req.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+    });
+  }
+  async function putClip(c) { try { await idbDo('readwrite', st => st.put(c)); } catch (e) { memClips.set(c.id, c); } }
+  async function delClip(id) { memClips.delete(id); try { await idbDo('readwrite', st => st.delete(id)); } catch (e) {} }
+  async function refreshClips() {
+    let list = [];
+    try { list = (await idbDo('readonly', st => st.getAll())) || []; } catch (e) {}
+    const byId = new Map(list.map(c => [c.id, c]));
+    memClips.forEach((c, id) => byId.set(id, c));
+    clips = [...byId.values()].sort((x, y) => x.at - y.at);
+    $('vidBtn').textContent = clips.length ? `影片 ${clips.length}` : '影片';
+  }
+
+  // --- live camera ---
+  const live = () => !!(CAM.stream && CAM.stream.getVideoTracks().some(t => t.readyState === 'live'));
+  async function camStart() {
+    if (live()) return true;
+    if (!CAM.enabled || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+    try {
+      CAM.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } }, audio: { echoCancellation: true, noiseSuppression: true } });
+    } catch (e) {
+      try { CAM.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }); }
+      catch (e2) { CAM.stream = null; return false; }
+    }
+    for (const id of ['pipVideo', 'introVideo']) { const v = $(id); v.srcObject = CAM.stream; v.muted = true; v.play().catch(() => {}); }
+    return true;
+  }
+  function camStop() {
+    if (CAM.active) CAM.active.stop();
+    if (CAM.stream) CAM.stream.getTracks().forEach(t => t.stop());
+    CAM.stream = null;
+  }
+  function syncCam() { $('camBtn').textContent = CAM.enabled ? '鏡頭 開' : '鏡頭 關'; $('camBtn').setAttribute('aria-pressed', String(CAM.enabled)); }
+  $('camBtn').addEventListener('click', async () => {
+    CAM.enabled = !CAM.enabled;
+    try { localStorage.setItem('xiaohe-cam', CAM.enabled ? 'on' : 'off'); } catch (e) {}
+    syncCam();
+    if (!CAM.enabled) { camStop(); toast('鏡頭關了，中獎不會自動錄影'); }
+    else toast((await camStart()) ? '鏡頭開了，中獎會自動錄 10 秒' : '手機沒有給鏡頭權限，中獎時可以按按鈕用相機錄');
+  });
+  syncCam();
+  document.addEventListener('visibilitychange', () => { if (document.hidden && !CAM.active) camStop(); });
+
+  const pickMime = () => window.MediaRecorder && MediaRecorder.isTypeSupported &&
+    ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
+  const waitMeta = (v) => v.videoWidth ? Promise.resolve() : new Promise(r => { v.addEventListener('loadedmetadata', r, { once: true }); setTimeout(r, 1500); });
+
+  // Record `seconds` of the live camera shown in `videoEl`, with the caption burned in. Resolves with the saved clip (or null).
+  function recordLive(meta, seconds, videoEl, onTick) {
+    if (CAM.active) CAM.active.stop();
+    const mime = pickMime();
+    if (!mime || !live()) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const vw = videoEl.videoWidth || 480, vh = videoEl.videoHeight || 640;
+      const scale = Math.min(1, 720 / Math.max(vw, vh));
+      const W = Math.round(vw * scale / 2) * 2, H = Math.round(vh * scale / 2) * 2;
+      const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H;
+      const g = cnv.getContext('2d');
+      let out, burned = true;
+      if (cnv.captureStream) {
+        out = cnv.captureStream(30);
+        const track = SFX.recTrack(CAM.stream);
+        if (track) out.addTrack(track); else CAM.stream.getAudioTracks().forEach(t => out.addTrack(t));
+      } else { out = CAM.stream; burned = false; }
+      let rec;
+      try { rec = new MediaRecorder(out, { mimeType: mime, videoBitsPerSecond: 2500000 }); } catch (e) { resolve(null); return; }
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      const at0 = Date.now(), t0 = performance.now(), cap = caption({ ...meta, at: at0 });
+      const left = () => Math.ceil(Math.max(0, seconds - (performance.now() - t0) / 1000));
+      let rafId = 0, tickId = 0, timer = 0, stopped = false;
+      const draw = () => {
+        g.save(); g.translate(W, 0); g.scale(-1, 1); g.drawImage(videoEl, 0, 0, W, H); g.restore();   // mirrored, like a selfie
+        drawBanner(g, W, H, cap);
+        rafId = requestAnimationFrame(draw);
+      };
+      const stop = () => {
+        if (stopped) return; stopped = true;
+        cancelAnimationFrame(rafId); clearInterval(tickId); clearTimeout(timer);
+        if (CAM.active && CAM.active.rec === rec) CAM.active = null;
+        try { rec.stop(); } catch (e) { resolve(null); }
+      };
+      rec.onstop = async () => {
+        if (!chunks.length) { resolve(null); return; }
+        const blob = new Blob(chunks, { type: mime.split(';')[0] });
+        const clip = { ...meta, id: 'c' + at0, at: at0, blob, type: blob.type, burned };
+        await putClip(clip); await refreshClips();
+        resolve(clip);
+      };
+      if (burned) draw();
+      rec.start(500);
+      onTick && onTick(seconds);
+      tickId = setInterval(() => onTick && onTick(left()), 250);
+      timer = setTimeout(stop, seconds * 1000);
+      CAM.active = { rec, stop };
+    });
+  }
+
+  // every win: 10 s reaction in the PiP bubble, without stopping the game
+  async function autoRecord(k) {
+    if (!CAM.enabled || !(await camStart())) return;   // no camera: the result keeps its 錄 10 秒反應 button
+    const t = typeOf(k.type), gen = ++pipGen, pv = $('pipVideo');
+    $('pipCap').textContent = `中了 NT$${fmt(k.prize)}`;
+    $('pip').hidden = false;
+    pv.play().catch(() => {});
+    await waitMeta(pv);
+    const clip = await recordLive({ kind: 'win', ticketId: k.id, prize: k.prize, name: t.name, price: t.price, game: GAMES[t.game].name, serial: k.serial },
+      10, pv, (sec) => { if (gen === pipGen) $('pipCount').textContent = sec; });
+    if (gen === pipGen) $('pip').hidden = true;
+    if (clip) { toast('反應錄好了，收在「影片」裡'); if (cur && cur.id === k.id) showResult(cur, false); }
+  }
+
+  // --- opening speech ---
+  function openIntro() {
+    introBusy = false;
+    $('introStage').hidden = true; $('introRec').hidden = true;
+    $('camGo').textContent = '打開前鏡頭'; $('camGo').dataset.step = 'open'; $('camGo').disabled = false;
+    $('camSkip').hidden = false;
+    $('camHint').textContent = '按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每次中獎，鏡頭也會自動錄 10 秒反應。';
+    $('camOv').hidden = false;
+  }
+  function finishIntro() { state.introAsked = true; save(); $('camOv').hidden = true; introBusy = false; walkIn(); }
+  $('camGo').addEventListener('click', async () => {
+    const step = $('camGo').dataset.step;
+    if (step === 'open') {
+      $('camGo').disabled = true;
+      const ok = await camStart();
+      $('camGo').disabled = false;
+      if (!ok) {
+        $('camHint').textContent = '這支手機沒有讓網頁開鏡頭，改用手機相機錄。錄完按「使用影片」就會回到店裡。';
+        $('camGo').textContent = '打開相機'; $('camGo').dataset.step = 'app';
+        return;
+      }
+      $('introStage').hidden = false; $('introVideo').play().catch(() => {});
+      $('camHint').textContent = '準備好就按開始，會錄 15 秒，時間到自動停。';
+      $('camGo').textContent = '開始錄 15 秒'; $('camGo').dataset.step = 'rec';
+    } else if (step === 'rec') {
+      if (introBusy) return; introBusy = true;
+      $('camGo').textContent = '錄好了'; $('camGo').dataset.step = 'stop'; $('camSkip').hidden = true;
+      $('introRec').hidden = false; SFX.shutter();
+      const iv = $('introVideo');
+      await waitMeta(iv);
+      const clip = await recordLive({ kind: 'intro', brought: state.brought }, 15, iv, (sec) => { $('introCount').textContent = sec; });
+      toast(clip ? '感言收進回憶影片了' : '這次沒有錄成功，之後中獎還是會錄');
+      finishIntro();
+    } else if (step === 'stop') {
+      if (CAM.active) CAM.active.stop();
+    } else if (step === 'app') {
+      state.introAsked = true; save(); $('camOv').hidden = true;
+      startRecord({ kind: 'intro', brought: state.brought });
+      walkIn();
+    }
+  });
+  $('camSkip').addEventListener('click', () => { if (!introBusy) finishIntro(); });
+
+  // --- fallback: the phone's own camera app ---
+  function startRecord(meta) {
+    SFX.shutter();
+    camPending = meta;
+    camInput.value = '';
+    camInput.click();
+  }
+  camInput.addEventListener('change', async () => {
+    const f = camInput.files && camInput.files[0];
+    const meta = camPending; camPending = null;
+    if (!f || !meta) return;
+    await putClip({ ...meta, id: 'c' + Date.now(), at: Date.now(), blob: f, type: f.type || '', burned: false });
+    await refreshClips();
+    toast(meta.kind === 'intro' ? '感言收進回憶影片了' : '反應收進回憶影片了');
+    if (cur && meta.ticketId === cur.id) showResult(cur, false);
+  });
+  $('result').addEventListener('click', (e) => {
+    if (!e.target.closest('[data-rec]') || !cur) return;
+    const t = typeOf(cur.type);
+    startRecord({ kind: 'win', ticketId: cur.id, prize: cur.prize, name: t.name, price: t.price, game: GAMES[t.game].name, serial: cur.serial });
+  });
+
+  // --- memory wall ---
+  const stamp = (at) => { const d = new Date(at); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  function caption(c) {
+    return c.kind === 'intro'
+      ? { big: '開場感言', small: `帶 NT$${fmt(c.brought || 0)} 進場 · ${stamp(c.at)}` }
+      : { big: `中了 NT$${fmt(c.prize)}`, small: `${c.price} 元 ${c.name} · ${c.game} · ${stamp(c.at)}` };
+  }
+  function renderVids() {
+    urls.splice(0).forEach(u => URL.revokeObjectURL(u));
+    $('vidEmpty').hidden = clips.length > 0;
+    $('saveAll').hidden = clips.length < 2;
+    $('vids').innerHTML = clips.map(c => {
+      const u = URL.createObjectURL(c.blob); urls.push(u);
+      const cap = caption(c);
+      const btns = c.burned === false
+        ? `<button class="btn ghost" type="button" data-burn="${c.id}">印上獎項</button><button class="btn y" type="button" data-save="${c.id}">存原始檔</button>`
+        : `<button class="btn y" type="button" data-save="${c.id}">存到相簿</button>`;
+      return `<figure class="vid"><video src="${u}" controls playsinline preload="metadata"></video>
+        <figcaption><b>${cap.big}</b><span>${cap.small}</span></figcaption>
+        <div class="vid-btns"><button class="btn ghost" type="button" data-del="${c.id}">刪除</button>${btns}</div></figure>`;
+    }).join('');
+  }
+  async function openVids() { await refreshClips(); renderVids(); $('vidOv').hidden = false; }
+  $('vidBtn').addEventListener('click', openVids);
+  $('endVid').addEventListener('click', openVids);
+  $('vidClose').addEventListener('click', () => { $('vidOv').hidden = true; $('vids').querySelectorAll('video').forEach(v => v.pause()); });
+  $('vids').addEventListener('click', async (e) => {
+    const del = e.target.closest('[data-del]'), sv = e.target.closest('[data-save]'), burn = e.target.closest('[data-burn]');
+    if (sv) { const c = clips.find(x => x.id === sv.dataset.save); if (c) shareClips([c]); }   // must stay synchronous for the share sheet
+    else if (burn) burnIn(burn.dataset.burn);
+    else if (del) {
+      if (del.dataset.armed !== '1') { del.dataset.armed = '1'; del.textContent = '確定刪除？'; return; }
+      await delClip(del.dataset.del); await refreshClips(); renderVids();
+    }
+  });
+  $('saveAll').addEventListener('click', () => { if (clips.length) shareClips(clips); });
+
+  // --- saving to the phone ---
+  const extOf = (b) => /mp4/.test(b.type) ? 'mp4' : /webm/.test(b.type) ? 'webm' : /quicktime/.test(b.type) ? 'mov' : 'mp4';
+  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言' : `小鶴彩券行_中獎NT${c.prize}_${c.serial.replace(/[^0-9A-Za-z-]/g, '')}`) + '.' + extOf(c.blob);
+  function downloadFiles(files) {
+    files.forEach((f, i) => setTimeout(() => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 8000);
+    }, i * 500));
+    toast(files.length > 1 ? `${files.length} 段影片下載到手機了` : '影片下載到手機了');
+  }
+  // Called straight from a tap: iPhone only opens the share sheet (with 儲存影片) inside the tap itself.
+  function shareClips(list) {
+    const files = list.map(c => new File([c.blob], fileName(c), { type: c.blob.type || 'video/mp4' }));
+    if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+      navigator.share({ files, title: '小鶴彩券行' }).then(
+        () => toast('存好了'),
+        (e) => { if (e && e.name === 'AbortError') toast('沒有存'); else downloadFiles(files); });
+      return;
+    }
+    downloadFiles(files);
+  }
+
+  // Clips from the phone's camera app have no banner yet: replay one into a canvas with the banner and record it.
+  function drawBanner(g, W, H, cap) {
+    const css = getComputedStyle(document.documentElement);
+    const red = css.getPropertyValue('--red').trim(), yellow = css.getPropertyValue('--yellow').trim(), paper = css.getPropertyValue('--paper').trim();
+    const u = Math.min(W, H) / 100;
+    g.fillStyle = red; g.beginPath(); g.roundRect ? g.roundRect(3 * u, 3 * u, 34 * u, 9 * u, 4.5 * u) : g.rect(3 * u, 3 * u, 34 * u, 9 * u); g.fill();
+    g.fillStyle = yellow; g.font = `900 ${5 * u}px ${css.getPropertyValue('--sign-font')}`; g.textBaseline = 'middle'; g.textAlign = 'center';
+    g.fillText('小鶴彩券行', 20 * u, 7.6 * u);
+    const bandH = 26 * u, grad = g.createLinearGradient(0, H - bandH * 1.4, 0, H);
+    grad.addColorStop(0, 'rgba(158,24,32,0)'); grad.addColorStop(.35, 'rgba(158,24,32,.85)'); grad.addColorStop(1, 'rgba(120,14,20,.95)');
+    g.fillStyle = grad; g.fillRect(0, H - bandH * 1.4, W, bandH * 1.4);
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    g.fillStyle = yellow; g.font = `${11 * u}px ${css.getPropertyValue('--num')}, ${css.getPropertyValue('--sign-font')}`;
+    g.fillText(cap.big, 5 * u, H - 11 * u, W - 10 * u);
+    g.fillStyle = paper; g.font = `${4.4 * u}px ${css.getPropertyValue('--body')}`;
+    g.fillText(cap.small, 5 * u, H - 4.5 * u, W - 10 * u);
+  }
+  async function composite(c, onProgress) {
+    const mime = HTMLCanvasElement.prototype.captureStream && pickMime();
+    if (!mime) throw new Error('unsupported');
+    const url = URL.createObjectURL(c.blob);
+    const v = document.createElement('video');
+    v.playsInline = true; v.setAttribute('playsinline', ''); v.src = url;
+    $('mkStage').innerHTML = '';
+    $('mkStage').appendChild(v);
+    $('mkOv').hidden = false;
+    let ac = null;
+    try {
+      await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('load')); });
+      const scale = Math.min(1, 720 / Math.max(v.videoWidth, v.videoHeight));
+      const W = Math.round(v.videoWidth * scale / 2) * 2, H = Math.round(v.videoHeight * scale / 2) * 2;
+      if (!W || !H) throw new Error('size');
+      const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H;
+      $('mkStage').appendChild(cnv);
+      const g = cnv.getContext('2d');
+      const stream = cnv.captureStream(30);
+      try {
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        await ac.resume();
+        const dest = ac.createMediaStreamDestination();
+        ac.createMediaElementSource(v).connect(dest);
+        dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+      } catch (e) { v.muted = true; }
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      const stopped = new Promise(res => { rec.onstop = res; });
+      const limit = c.kind === 'intro' ? 15 : 10, cap = caption(c);
+      const frame = () => { g.drawImage(v, 0, 0, W, H); drawBanner(g, W, H, cap); };
+      frame();
+      await v.play();
+      rec.start(250);
+      await new Promise(res => {
+        const step = () => {
+          frame();
+          const total = Math.min(limit, isFinite(v.duration) ? v.duration : limit);
+          onProgress(Math.min(v.currentTime, total), total);
+          if (v.ended || v.currentTime >= limit) return res();
+          requestAnimationFrame(step);
+        };
+        step();
+      });
+      v.pause(); rec.stop(); await stopped;
+      if (!chunks.length) throw new Error('empty');
+      return { blob: new Blob(chunks, { type: mime.split(';')[0] }) };
+    } finally {
+      try { ac && ac.close(); } catch (e) {}
+      v.pause(); $('mkStage').innerHTML = ''; $('mkOv').hidden = true; URL.revokeObjectURL(url);
+    }
+  }
+  async function burnIn(id) {
+    const c = clips.find(x => x.id === id);
+    if (!c || saving) return;
+    saving = true;
+    try {
+      const out = await composite(c, (t, d) => { $('mkText').textContent = `正在把獎項印進影片… ${Math.floor(t)} / ${Math.round(d)} 秒`; });
+      await putClip({ ...c, blob: out.blob, type: out.blob.type, burned: true });
+      await refreshClips(); renderVids();
+      toast('獎項印好了，按「存到相簿」');
+    } catch (e) { toast('這支手機不能在網頁裡合成，可以直接存原始檔'); }
+    saving = false;
+  }
+  refreshClips();
+
+  // ---------- particles: coins, bills, hearts, stars, scratch flakes ----------
+  const cv = $('fx'), cx = cv.getContext('2d');
+  let parts = [], raf = 0, cvW = 0, cvH = 0;
+  function sizeFx() {
+    if (cvW === innerWidth && cvH === innerHeight) return;
+    const dpr = window.devicePixelRatio || 1;
+    cvW = innerWidth; cvH = innerHeight; cv.width = cvW * dpr; cv.height = cvH * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener('resize', () => { cvW = 0; sizeFx(); });
+  function burst(n, opt = {}) {
+    if (reduced() || parts.length > 1400) return;
+    if (opt === true) opt = { hearts: true };
+    sizeFx();
+    const css = getComputedStyle(document.documentElement), tok = (v) => css.getPropertyValue(v).trim();
+    const cols = ['--yellow', '--t10', '--t20', '--t50', '--t100', '--red'].map(tok);
+    const x0 = opt.x != null ? opt.x : innerWidth / 2, y0 = opt.y != null ? opt.y : innerHeight * .45, pw = opt.power || 1, fall = !!opt.fall;
+    for (let i = 0; i < n; i++) {
+      const kind = opt.kind || (opt.hearts ? (rand() < .75 ? 'heart' : 'coin') : (rand() < .4 ? 'bill' : 'coin'));
+      const c = kind === 'flake' ? tok(rand() < .5 ? '--foil-a' : '--foil-b')
+        : kind === 'star' ? tok(rand() < .7 ? '--yellow' : '--paper')
+        : kind === 'heart' && rand() < .6 ? tok('--hot') : pickOne(cols);
+      parts.push({
+        x: x0, y: y0, kind, c, life: 0, rot: rand() * 6, vr: (rand() - .5) * .3,
+        vx: fall ? (rand() - .5) * 1.5 : (rand() - .5) * 15 * pw,
+        vy: fall ? 1.5 + rand() * 2.5 : (-rand() * 14 - 4) * pw,
+        g: fall ? .02 : kind === 'star' ? .1 : kind === 'flake' ? .3 : .35,
+        r: kind === 'flake' ? 1.2 + rand() * 1.8 : kind === 'star' ? 3 + rand() * 5 : 5 + rand() * 6,
+        max: kind === 'flake' ? 45 : kind === 'star' ? 70 : fall ? 600 : 230
+      });
+    }
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function tick() {
+    cx.clearRect(0, 0, cvW, cvH);
+    parts = parts.filter(p => p.life < p.max && p.y < cvH + 40);
+    for (const p of parts) {
+      p.life++; p.vy += p.g; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.fillStyle = p.c;
+      cx.globalAlpha = p.kind === 'star' || p.kind === 'flake' ? Math.max(0, 1 - p.life / p.max) : 1;
+      if (p.kind === 'heart') { const k = p.r / 4.5; cx.beginPath(); cx.moveTo(0, 3 * k); cx.bezierCurveTo(-6 * k, -2 * k, -3 * k, -7 * k, 0, -3.5 * k); cx.bezierCurveTo(3 * k, -7 * k, 6 * k, -2 * k, 0, 3 * k); cx.fill(); }
+      else if (p.kind === 'bill') cx.fillRect(-p.r * 1.4, -p.r * .8, p.r * 2.8, p.r * 1.6);
+      else if (p.kind === 'star') { const r = p.r, q = r * .25; cx.beginPath(); cx.moveTo(0, -r); cx.lineTo(q, -q); cx.lineTo(r, 0); cx.lineTo(q, q); cx.lineTo(0, r); cx.lineTo(-q, q); cx.lineTo(-r, 0); cx.lineTo(-q, -q); cx.closePath(); cx.fill(); }
+      else if (p.kind === 'flake') cx.fillRect(-p.r, -p.r * .6, p.r * 2, p.r * 1.2);
+      else { cx.scale(Math.abs(Math.cos(p.rot * 2)) * .8 + .2, 1); cx.beginPath(); cx.arc(0, 0, p.r, 0, Math.PI * 2); cx.fill(); }
+      cx.restore();
+    }
+    raf = parts.length ? requestAnimationFrame(tick) : 0;
+    if (!raf) cx.clearRect(0, 0, cvW, cvH);
+  }
+
+  // ---------- boot ----------
+  function start(data) {
+    state = valid(data && data.state) ? data.state : (load() || printBatch(DEFAULT_CONFIG, 'A', DEFAULT_BONUS));
+    save();
+    render();
+    showScene(data && data.scene === 'inside' ? 'inside' : 'front');
+  }
+  start({});
+})();
+</script>
+</body>
+</html>
