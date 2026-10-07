@@ -397,6 +397,18 @@ img{max-width:100%}
 .intro-stage{position:relative;width:100%;max-width:260px;align-self:center;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:#000;border:3px solid var(--yellow)}
 .intro-stage .rec-badge{font-size:16px;top:10px;left:10px}
 .snd.cam{right:auto;left:12px}
+.script{background:#fff6dc;border:2px dashed var(--yellow-deep);border-radius:12px;padding:10px 12px;font-size:18px;line-height:1.6;color:var(--ink);text-wrap:balance}
+.script span{display:block;font-size:12px;color:var(--muted-ink);letter-spacing:.1em}
+.cue{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:63;width:min(420px,calc(100% - 32px));
+  background:var(--paper);color:var(--ink);border:3px solid var(--yellow);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 12px 30px rgba(0,0,0,.5);animation:pipIn .35s cubic-bezier(.3,1.4,.5,1)}
+.cue-top{display:flex;align-items:center;gap:10px}
+.cue-top b{font-weight:400;font-size:14px;color:var(--muted-ink)}
+.cue .rec-badge{position:static;font-size:14px}
+.cue-line{margin:0;font-size:clamp(18px,5vw,22px);line-height:1.5;text-wrap:balance}
+.cue-btns{display:flex;gap:8px}
+.cue-btns .btn{flex:1;padding:8px 12px}
+.cue .btn.ghost{color:var(--ink)}
 .vid-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){.pip{animation:none}.rec-badge i{animation:none}}
 </style>
@@ -439,7 +451,7 @@ img{max-width:100%}
     <div class="floor"></div>
   </div>
   <button class="enter" id="enterBtn" type="button">推門進去</button>
-  <p class="hint-line" id="frontHint">叮咚～ 點門或按鈕走進店裡</p>
+  <p class="hint-line" id="frontHint">推門前會先錄一段開場台詞 · 點門走進店裡</p>
 </section>
 <div class="whiteout" id="whiteout"><span class="welcome">歡迎光臨</span></div>
 
@@ -621,6 +633,7 @@ img{max-width:100%}
       <video id="introVideo" playsinline muted autoplay></video>
       <span class="rec-badge" id="introRec" hidden><i></i><span id="introCount">15</span></span>
     </div>
+    <div class="script" id="introScript"></div>
     <div class="rec-hint" id="camHint">按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每刮開一張，不管有沒有中，鏡頭都會自動錄 10 秒反應。</div>
     <div class="row">
       <button class="btn ghost" id="camSkip" type="button">跳過</button>
@@ -635,7 +648,7 @@ img{max-width:100%}
     <div class="vid-top"><h3 id="vidTitle">回憶影片</h3><button class="btn y" id="saveAll" type="button">全部存到相簿</button></div>
     <p>影片存在這支手機的遊戲裡，畫面下方印著當下抽到的獎。按「存到相簿」iPhone 會跳出分享選單，選「儲存影片」。</p>
     <div class="vids" id="vids"></div>
-    <p class="empty" id="vidEmpty">還沒有影片。進門前的感言、每刮開一張的反應都會錄在這裡。</p>
+    <p class="empty" id="vidEmpty">還沒有影片。進門前的感言、開始挑彩券的台詞、每刮開一張的反應都會錄在這裡。</p>
     <div class="row"><button class="btn" id="vidClose" type="button">回到桌子</button></div>
   </div>
 </div>
@@ -673,6 +686,11 @@ img{max-width:100%}
   <video id="pipVideo" playsinline muted autoplay></video>
   <span class="rec-badge"><i></i><span id="pipCount">10</span></span>
   <span class="pip-cap" id="pipCap"></span>
+</div>
+<div class="cue" id="cue" hidden role="status">
+  <div class="cue-top"><span class="rec-badge"><i></i><span id="cueCount">準備</span></span><b id="cueTitle">開始挑彩券｜台詞 1 / 2</b></div>
+  <p class="cue-line" id="cueLine"></p>
+  <div class="cue-btns"><button class="btn ghost" id="cueSkip" type="button">不錄了</button><button class="btn y" id="cueDone" type="button" disabled>說完了</button></div>
 </div>
 <button class="snd cam" id="camBtn" type="button" aria-pressed="true">鏡頭 開</button>
 <button class="snd" id="sndBtn" type="button" aria-pressed="true">聲音 開</button>
@@ -951,7 +969,7 @@ img{max-width:100%}
     $('wIn').textContent = fmt(state.brought);
     $('wNet').textContent = (net > 0 ? '+' : net < 0 ? '−' : '') + fmt(Math.abs(net));
     $('wNetBox').classList.toggle('neg', net < 0);
-    $('frontHint').textContent = state.brought ? `錢包裡還有 NT$${fmt(state.wallet)} · 點門走進店裡` : '叮咚～ 點門或按鈕走進店裡';
+    $('frontHint').textContent = state.brought ? `錢包裡還有 NT$${fmt(state.wallet)} · 點門走進店裡` : '推門前會先錄一段開場台詞 · 點門走進店裡';
     const allDone = state.tickets.every(k => k.revealed);
     $('endCard').hidden = !allDone;
     if (allDone) {
@@ -1018,6 +1036,7 @@ img{max-width:100%}
       SFX.bgmStart();
       say('歡迎光臨小鶴彩券行～桌上的刮刮樂隨便挑，挑好拿來結帳。');
       entering = false;
+      setTimeout(startPickLines, 1800);
     }, reduce ? 50 : 1250);
     setTimeout(() => $('whiteout').classList.remove('on'), reduce ? 60 : 1900);
   }
@@ -1632,6 +1651,7 @@ img{max-width:100%}
 
   // every ticket: 10 s reaction in the PiP bubble, without stopping the game
   async function autoRecord(k) {
+    if (cueRunning) { cueAbort = true; state.pickLinesDone = true; save(); $('cue').hidden = true; }   // the ticket takes over the camera
     if (!CAM.enabled || !(await camStart())) return;   // no camera: the result keeps its 錄 10 秒反應 button
     const t = typeOf(k.type), gen = ++pipGen, pv = $('pipVideo');
     $('pipCap').textContent = k.prize > 0 ? `中了 NT$${fmt(k.prize)}` : '銘謝惠顧';
@@ -1644,9 +1664,50 @@ img{max-width:100%}
     if (clip) { if (k.prize > 0) toast('反應錄好了，收在「影片」裡'); if (cur && cur.id === k.id) showResult(cur, false); }
   }
 
+  // --- two short lines when she starts picking: recorded in the PiP bubble while she browses the table ---
+  const PICK_LINES = ['哇～整桌都是刮刮樂！讓我看看哪一張在對我笑……', '就決定是你們了！小鶴保佑，今天一定中大獎！'];
+  let cueAbort = false, cueRunning = false;
+  async function startPickLines() {
+    if (state.pickLinesDone || cueRunning || !CAM.enabled || scene !== 'inside') return;
+    if (!(await camStart())) return;
+    cueRunning = true; cueAbort = false;
+    const pv = $('pipVideo');
+    say('先錄兩段開場台詞，照著卡片唸就好！');
+    for (let i = 0; i < PICK_LINES.length && !cueAbort; i++) {
+      $('cueTitle').textContent = `開始挑彩券｜台詞 ${i + 1} / ${PICK_LINES.length}`;
+      $('cueLine').textContent = `「${PICK_LINES[i]}」`;
+      $('cueDone').disabled = true; $('cue').hidden = false;
+      for (let c = 3; c > 0 && !cueAbort; c--) { $('cueCount').textContent = `準備 ${c}`; SFX.blip(); await new Promise(r => setTimeout(r, 800)); }
+      if (cueAbort) break;
+      const gen = ++pipGen;
+      $('pipCap').textContent = `台詞 ${i + 1}`; $('pip').hidden = false; pv.play().catch(() => {});
+      await waitMeta(pv);
+      SFX.shutter();
+      const enable = setTimeout(() => { $('cueDone').disabled = false; }, 5000);   // at least 5 s, at most 10 s
+      await recordLive({ kind: 'pick', n: i + 1 }, 10, pv, (sec) => {
+        $('cueCount').textContent = `REC ${sec}`;
+        if (gen === pipGen) $('pipCount').textContent = sec;
+      });
+      clearTimeout(enable);
+      if (gen === pipGen) $('pip').hidden = true;
+    }
+    $('cue').hidden = true;
+    cueRunning = false;
+    if (!cueAbort) { state.pickLinesDone = true; save(); toast('兩段台詞錄好了，開始挑吧！'); say('錄好了？那就挑吧，桌上隨便選！'); }
+  }
+  $('cueDone').addEventListener('click', () => { if (CAM.active) CAM.active.stop(); });
+  $('cueSkip').addEventListener('click', () => {
+    cueAbort = true; state.pickLinesDone = true; save();
+    if (CAM.active) CAM.active.stop();
+    $('cue').hidden = true;
+  });
+
   // --- opening speech ---
+  const introLine = () => `大家好，我是今天的幸運女神！我帶了 NT$${fmt(state.brought)} 來小鶴彩券行，目標是把老闆刮到破產！小鶴老闆，準備好你的錢包了嗎？`;
   function openIntro() {
     introBusy = false;
+    $('introScript').innerHTML = '<span>台詞（照著唸，或自由發揮）</span>';
+    $('introScript').append(`「${introLine()}」`);
     $('introStage').hidden = true; $('introRec').hidden = true;
     $('camGo').textContent = '打開前鏡頭'; $('camGo').dataset.step = 'open'; $('camGo').disabled = false;
     $('camSkip').hidden = false;
@@ -1712,6 +1773,7 @@ img{max-width:100%}
   // --- memory wall ---
   const stamp = (at) => { const d = new Date(at); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   function caption(c) {
+    if (c.kind === 'pick') return { big: `挑彩券台詞 ${c.n}`, small: `小鶴彩券行 · 開始挑彩券 · ${stamp(c.at)}` };
     return c.kind === 'intro'
       ? { big: '開場感言', small: `帶 NT$${fmt(c.brought || 0)} 進場 · ${stamp(c.at)}` }
       : { big: c.prize > 0 ? `中了 NT$${fmt(c.prize)}` : '銘謝惠顧', small: `${c.price} 元 ${c.name} · ${c.game} · ${stamp(c.at)}` };
@@ -1748,7 +1810,7 @@ img{max-width:100%}
 
   // --- saving to the phone ---
   const extOf = (b) => /mp4/.test(b.type) ? 'mp4' : /webm/.test(b.type) ? 'webm' : /quicktime/.test(b.type) ? 'mov' : 'mp4';
-  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言'
+  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言' : c.kind === 'pick' ? `小鶴彩券行_挑彩券台詞${c.n}`
     : `小鶴彩券行_${c.prize > 0 ? `中獎NT${c.prize}` : '銘謝惠顧'}_${c.serial.replace(/[^0-9A-Za-z-]/g, '')}`) + '.' + extOf(c.blob);
   function downloadFiles(files) {
     files.forEach((f, i) => setTimeout(() => {
