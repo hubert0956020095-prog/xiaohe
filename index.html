@@ -621,7 +621,7 @@ img{max-width:100%}
       <video id="introVideo" playsinline muted autoplay></video>
       <span class="rec-badge" id="introRec" hidden><i></i><span id="introCount">15</span></span>
     </div>
-    <div class="rec-hint" id="camHint">按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每次中獎，鏡頭也會自動錄 10 秒反應。</div>
+    <div class="rec-hint" id="camHint">按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每刮開一張，不管有沒有中，鏡頭都會自動錄 10 秒反應。</div>
     <div class="row">
       <button class="btn ghost" id="camSkip" type="button">跳過</button>
       <button class="btn y" id="camGo" type="button">打開前鏡頭</button>
@@ -635,7 +635,7 @@ img{max-width:100%}
     <div class="vid-top"><h3 id="vidTitle">回憶影片</h3><button class="btn y" id="saveAll" type="button">全部存到相簿</button></div>
     <p>影片存在這支手機的遊戲裡，畫面下方印著當下抽到的獎。按「存到相簿」iPhone 會跳出分享選單，選「儲存影片」。</p>
     <div class="vids" id="vids"></div>
-    <p class="empty" id="vidEmpty">還沒有影片。進門前的感言、每次中獎的反應都可以錄。</p>
+    <p class="empty" id="vidEmpty">還沒有影片。進門前的感言、每刮開一張的反應都會錄在這裡。</p>
     <div class="row"><button class="btn" id="vidClose" type="button">回到桌子</button></div>
   </div>
 </div>
@@ -1256,7 +1256,8 @@ img{max-width:100%}
     } else if (k.prize > 0) {
       SFX.winSmall(); burst(60); burst(20, { kind: 'star', power: .7 });
     } else SFX.lose();
-    if (k.prize > 0) { floatText(`+NT$${fmt(k.prize)}`, $('result'), 'plus'); autoRecord(k); }
+    if (k.prize > 0) floatText(`+NT$${fmt(k.prize)}`, $('result'), 'plus');
+    autoRecord(k);   // every ticket, win or 銘謝惠顧
   }
   function stampFor(k, fresh) {
     const st = $('stamp');
@@ -1402,7 +1403,8 @@ img{max-width:100%}
       stampFor(k, fresh);
     } else {
       r.className = 'result';
-      r.innerHTML = '<span class="r1">銘謝惠顧</span><span class="r2" style="font-size:20px">下一張一定中</span>';
+      r.innerHTML = '<span class="r1">銘謝惠顧</span><span class="r2" style="font-size:20px">下一張一定中</span>' +
+        (live() ? '' : `<button class="btn y rec-btn" type="button" data-rec>${clips.some(c => c.ticketId === k.id) ? '再錄一次反應' : '錄 10 秒反應'}</button>`);
       stampFor(k, fresh);
     }
   }
@@ -1567,8 +1569,8 @@ img{max-width:100%}
     CAM.enabled = !CAM.enabled;
     try { localStorage.setItem('xiaohe-cam', CAM.enabled ? 'on' : 'off'); } catch (e) {}
     syncCam();
-    if (!CAM.enabled) { camStop(); toast('鏡頭關了，中獎不會自動錄影'); }
-    else toast((await camStart()) ? '鏡頭開了，中獎會自動錄 10 秒' : '手機沒有給鏡頭權限，中獎時可以按按鈕用相機錄');
+    if (!CAM.enabled) { camStop(); toast('鏡頭關了，刮開不會自動錄影'); }
+    else toast((await camStart()) ? '鏡頭開了，每刮開一張會自動錄 10 秒' : '手機沒有給鏡頭權限，刮開後可以按按鈕用相機錄');
   });
   syncCam();
   document.addEventListener('visibilitychange', () => { if (document.hidden && !CAM.active) camStop(); });
@@ -1584,7 +1586,7 @@ img{max-width:100%}
     if (!mime || !live()) return Promise.resolve(null);
     return new Promise((resolve) => {
       const vw = videoEl.videoWidth || 480, vh = videoEl.videoHeight || 640;
-      const scale = Math.min(1, 720 / Math.max(vw, vh));
+      const scale = Math.min(1, 640 / Math.max(vw, vh));   // ~150 clips per table: keep each one small
       const W = Math.round(vw * scale / 2) * 2, H = Math.round(vh * scale / 2) * 2;
       const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H;
       const g = cnv.getContext('2d');
@@ -1595,7 +1597,7 @@ img{max-width:100%}
         if (track) out.addTrack(track); else CAM.stream.getAudioTracks().forEach(t => out.addTrack(t));
       } else { out = CAM.stream; burned = false; }
       let rec;
-      try { rec = new MediaRecorder(out, { mimeType: mime, videoBitsPerSecond: 2500000 }); } catch (e) { resolve(null); return; }
+      try { rec = new MediaRecorder(out, { mimeType: mime, videoBitsPerSecond: 1200000 }); } catch (e) { resolve(null); return; }
       const chunks = [];
       rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
       const at0 = Date.now(), t0 = performance.now(), cap = caption({ ...meta, at: at0 });
@@ -1628,18 +1630,18 @@ img{max-width:100%}
     });
   }
 
-  // every win: 10 s reaction in the PiP bubble, without stopping the game
+  // every ticket: 10 s reaction in the PiP bubble, without stopping the game
   async function autoRecord(k) {
     if (!CAM.enabled || !(await camStart())) return;   // no camera: the result keeps its 錄 10 秒反應 button
     const t = typeOf(k.type), gen = ++pipGen, pv = $('pipVideo');
-    $('pipCap').textContent = `中了 NT$${fmt(k.prize)}`;
+    $('pipCap').textContent = k.prize > 0 ? `中了 NT$${fmt(k.prize)}` : '銘謝惠顧';
     $('pip').hidden = false;
     pv.play().catch(() => {});
     await waitMeta(pv);
     const clip = await recordLive({ kind: 'win', ticketId: k.id, prize: k.prize, name: t.name, price: t.price, game: GAMES[t.game].name, serial: k.serial },
       10, pv, (sec) => { if (gen === pipGen) $('pipCount').textContent = sec; });
     if (gen === pipGen) $('pip').hidden = true;
-    if (clip) { toast('反應錄好了，收在「影片」裡'); if (cur && cur.id === k.id) showResult(cur, false); }
+    if (clip) { if (k.prize > 0) toast('反應錄好了，收在「影片」裡'); if (cur && cur.id === k.id) showResult(cur, false); }
   }
 
   // --- opening speech ---
@@ -1648,7 +1650,7 @@ img{max-width:100%}
     $('introStage').hidden = true; $('introRec').hidden = true;
     $('camGo').textContent = '打開前鏡頭'; $('camGo').dataset.step = 'open'; $('camGo').disabled = false;
     $('camSkip').hidden = false;
-    $('camHint').textContent = '按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每次中獎，鏡頭也會自動錄 10 秒反應。';
+    $('camHint').textContent = '按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每刮開一張，不管有沒有中，鏡頭都會自動錄 10 秒反應。';
     $('camOv').hidden = false;
   }
   function finishIntro() { state.introAsked = true; save(); $('camOv').hidden = true; introBusy = false; walkIn(); }
@@ -1673,7 +1675,7 @@ img{max-width:100%}
       const iv = $('introVideo');
       await waitMeta(iv);
       const clip = await recordLive({ kind: 'intro', brought: state.brought }, 15, iv, (sec) => { $('introCount').textContent = sec; });
-      toast(clip ? '感言收進回憶影片了' : '這次沒有錄成功，之後中獎還是會錄');
+      toast(clip ? '感言收進回憶影片了' : '這次沒有錄成功，之後刮開還是會錄');
       finishIntro();
     } else if (step === 'stop') {
       if (CAM.active) CAM.active.stop();
@@ -1712,7 +1714,7 @@ img{max-width:100%}
   function caption(c) {
     return c.kind === 'intro'
       ? { big: '開場感言', small: `帶 NT$${fmt(c.brought || 0)} 進場 · ${stamp(c.at)}` }
-      : { big: `中了 NT$${fmt(c.prize)}`, small: `${c.price} 元 ${c.name} · ${c.game} · ${stamp(c.at)}` };
+      : { big: c.prize > 0 ? `中了 NT$${fmt(c.prize)}` : '銘謝惠顧', small: `${c.price} 元 ${c.name} · ${c.game} · ${stamp(c.at)}` };
   }
   function renderVids() {
     urls.splice(0).forEach(u => URL.revokeObjectURL(u));
@@ -1746,7 +1748,8 @@ img{max-width:100%}
 
   // --- saving to the phone ---
   const extOf = (b) => /mp4/.test(b.type) ? 'mp4' : /webm/.test(b.type) ? 'webm' : /quicktime/.test(b.type) ? 'mov' : 'mp4';
-  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言' : `小鶴彩券行_中獎NT${c.prize}_${c.serial.replace(/[^0-9A-Za-z-]/g, '')}`) + '.' + extOf(c.blob);
+  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言'
+    : `小鶴彩券行_${c.prize > 0 ? `中獎NT${c.prize}` : '銘謝惠顧'}_${c.serial.replace(/[^0-9A-Za-z-]/g, '')}`) + '.' + extOf(c.blob);
   function downloadFiles(files) {
     files.forEach((f, i) => setTimeout(() => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
