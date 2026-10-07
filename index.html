@@ -521,6 +521,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
 
     <div class="foot-links">
       <button class="linkish" id="goOut" type="button">走回門口</button>
+      <button class="linkish" id="restartBtn" type="button">重新開始</button>
       <button class="linkish" id="bossOpen" type="button">老闆後台</button>
     </div>
   </div>
@@ -683,6 +684,13 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
 </div>
 <input class="vh" id="camInput" type="file" accept="video/*" capture="user" tabindex="-1" aria-hidden="true">
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="overlay" id="resetOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
+    <h3 id="resetTitle">重新開始？</h3>
+    <p>錢包、帶進來的錢、桌上的彩券和輸贏都會歸零，換上一批新的彩券，進門時會重新錄開場。<b>回憶影片全部留著</b>，會接著繼續存。</p>
+    <div class="row"><button class="btn ghost" id="resetNo" type="button">不要</button><button class="btn y" id="resetYes" type="button">重新開始</button></div>
+  </div>
+</div>
 
 <!-- how much money she brings in (virtual; settled in real cash afterwards) -->
 <div class="overlay" id="bringOv" hidden>
@@ -693,7 +701,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       <button type="button" data-v="500">500</button><button type="button" data-v="1000">1,000</button><button type="button" data-v="2000">2,000</button>
       <button type="button" data-v="3000">3,000</button><button type="button" data-v="5000">5,000</button><button type="button" data-v="5800">5,800</button>
     </div>
-    <label class="money-in" for="bringIn"><span>NT$</span><input id="bringIn" type="number" min="10" max="100000" step="10" inputmode="numeric" value="1000" aria-label="金額"></label>
+    <label class="money-in" for="bringIn"><span>NT$</span><input id="bringIn" type="number" min="10" max="100000" step="10" inputmode="numeric" placeholder="輸入金額" aria-label="金額"></label>
     <p class="err" id="bringErr" hidden></p>
     <div class="row">
       <button class="btn ghost" id="bringCancel" type="button">再想想</button>
@@ -739,7 +747,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
 
 <script>
 (() => {
-  const KEY = 'xiaohe-lottery-v7';
+  const KEY = 'xiaohe-lottery-v8';
   const DEFAULT_CONFIG = [
     { id: 't10', game: 'match3', price: 10, name: '小確幸', count: 50, prizes: [{ amt: 500, qty: 1 }, { amt: 100, qty: 2 }, { amt: 50, qty: 2 }, { amt: 20, qty: 5 }, { amt: 10, qty: 10 }] },
     { id: 't20', game: 'beat', price: 20, name: '甜甜好運', count: 40, prizes: [{ amt: 1000, qty: 1 }, { amt: 200, qty: 1 }, { amt: 50, qty: 4 }, { amt: 20, qty: 5 }] },
@@ -1095,7 +1103,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   }
   $('doorBtn').addEventListener('click', enter);
   $('enterBtn').addEventListener('click', enter);
-  $('goOut').addEventListener('click', () => { camStop(); showScene('front'); });
+  $('goOut').addEventListener('click', () => showScene('front'));   // camera stays on: no second permission prompt
 
   // ---------- bringing money in ----------
   let bringMode = 'enter', bringThen = null;
@@ -1105,7 +1113,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('bringSub').textContent = mode === 'enter' ? '店裡用的是虛擬錢。刮完以後，再跟老闆用現金算差額。'
       : need > 0 ? `錢包還差 NT$${fmt(need)}，補進來才能繼續。最後一起跟老闆算。` : '會加進錢包，最後一起跟老闆算。';
     $('bringOk').textContent = mode === 'enter' ? '帶著錢進去' : '放進錢包';
-    $('bringIn').value = mode === 'enter' ? 1000 : Math.max(100, Math.ceil((need || 500) / 100) * 100);
+    $('bringIn').value = mode === 'enter' ? '' : Math.max(100, Math.ceil((need || 500) / 100) * 100);
     $('bringErr').hidden = true;
     markChip();
     $('bringOv').hidden = false;
@@ -1249,6 +1257,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
 
   function paintFoil(f) {
     const r = f.c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (!r.width || !r.height) { if ((f.tries = (f.tries || 0) + 1) < 120) requestAnimationFrame(() => paintFoil(f)); return; }
     f.c.width = Math.round(r.width * dpr); f.c.height = Math.round(r.height * dpr);
     const x = f.ctx;
     x.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1268,6 +1277,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     x.fillStyle = 'rgba(40,36,70,.55)';
     x.font = `${Math.max(13, Math.min(22, r.height * .28))}px ${css.getPropertyValue('--body')}`;
     x.fillText(r.height > 80 ? '小鶴 · 刮開這裡' : '刮開', r.width / 2, r.height / 2);
+    f.painted = true;
   }
   function bindFoil(f) {
     const pos = (e) => { const r = f.c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
@@ -1292,7 +1302,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     if (++f.strokes % 6 === 0) check(f);
   }
   function check(f) {
-    const { width: w, height: h } = f.c; if (!w || !h || f.done) return;
+    const { width: w, height: h } = f.c; if (!w || !h || f.done || !f.painted) return;
     const d = f.ctx.getImageData(0, 0, w, h).data;
     let clear = 0, n = 0;
     for (let y = 0; y < h; y += 8) for (let xx = 0; xx < w; xx += 8) { n++; if (d[(y * w + xx) * 4 + 3] < 40) clear++; }
@@ -1490,7 +1500,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     tk.style.transform = ''; tk.style.marginBottom = '';
     const cs = getComputedStyle($('scratchOv'));
     const h = tk.offsetHeight, avail = innerHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 4;
-    if (h > avail) {   // short phone: scale the whole ticket down instead of letting it scroll
+    if (avail > 300 && h > avail && avail / h > .5) {   // short phone: scale the whole ticket down instead of letting it scroll
       tk.style.transformOrigin = 'top center';
       tk.style.transform = `scale(${avail / h})`;
       tk.style.marginBottom = `${avail - h}px`;
@@ -1738,8 +1748,10 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   syncCam();
   syncFit();
   // leaving the page (app switch, swipe back, lock screen) silences the shop; coming back turns it on again
+  // The camera stays on for the whole visit once allowed: stopping it would make the phone ask for permission again.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { SFX.pause(); if (!CAM.active) camStop(); } else SFX.resume();
+    if (document.hidden) SFX.pause();
+    else { SFX.resume(); ['pipVideo', 'introVideo'].forEach(id => { const v = $(id); if (v.srcObject) v.play().catch(() => {}); }); }
   });
   addEventListener('pagehide', () => SFX.pause());
   addEventListener('pageshow', (e) => { if (e.persisted) SFX.resume(); });
@@ -2265,6 +2277,19 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     raf = parts.length ? requestAnimationFrame(tick) : 0;
     if (!raf) cx.clearRect(0, 0, cvW, cvH);
   }
+
+  // ---------- start over (videos are kept in their own store and are not touched) ----------
+  $('restartBtn').addEventListener('click', () => { $('resetOv').hidden = false; });
+  $('resetNo').addEventListener('click', () => { $('resetOv').hidden = true; });
+  $('resetYes').addEventListener('click', () => {
+    const next = state.batch === 'Z' ? 'A' : String.fromCharCode(state.batch.charCodeAt(0) + 1);
+    state = printBatch(state.config, next, state.bonus || DEFAULT_BONUS);
+    selected.clear();
+    save(); render();
+    $('resetOv').hidden = true;
+    showScene('front');
+    toast('重新開始了！影片都還在');
+  });
 
   // ---------- boot ----------
   function start(data) {
