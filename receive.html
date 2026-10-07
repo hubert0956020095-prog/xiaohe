@@ -51,6 +51,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--yellow);outline-off
     <div class="code" id="code">······</div>
     <p class="status" id="status">準備中…</p>
     <div class="bar"><i id="bar"></i></div>
+    <button id="pickDir" type="button">選擇存放資料夾（自動分成中獎／銘謝惠顧）</button>
+    <p class="k" id="dirNote">沒選的話，影片會存到「下載」資料夾。</p>
   </section>
 
   <section style="display:flex;flex-direction:column;gap:10px">
@@ -82,6 +84,32 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--yellow);outline-off
   }
   $('again').addEventListener('click', () => files.forEach((f, i) => setTimeout(() => download(f), i * 300)));
 
+  // Chrome / Edge on a computer can write straight into a folder: clips are sorted into 中獎\金額, 銘謝惠顧, 進場, 最後結算
+  let dir = null;
+  if (!window.showDirectoryPicker) { $('pickDir').hidden = true; $('dirNote').textContent = '這個瀏覽器只能存到「下載」資料夾。用 Chrome 或 Edge 可以自動分資料夾。'; }
+  $('pickDir').addEventListener('click', async () => {
+    try {
+      dir = await window.showDirectoryPicker({ mode: 'readwrite', id: 'xiaohe' });
+      $('dirNote').textContent = `會存到「${dir.name}」，自動分成 中獎（依金額）、銘謝惠顧、進場、最後結算。`;
+    } catch (e) { /* closed the picker: keep using Downloads */ }
+  });
+  function subPathFor(name) {
+    const m = name.match(/_中獎NT(\d+)_/);
+    if (m) return ['中獎', `${m[1]}元`];
+    if (/_銘謝惠顧_/.test(name)) return ['銘謝惠顧'];
+    if (/_進場/.test(name)) return ['進場'];
+    if (/_最後結算/.test(name)) return ['最後結算'];
+    return ['其他'];
+  }
+  async function saveSorted(name, blob) {
+    let d = dir;
+    for (const part of subPathFor(name)) d = await d.getDirectoryHandle(part, { create: true });
+    let fname = name;
+    try { await d.getFileHandle(fname); fname = name.replace(/(\.\w+)$/, `_${Date.now()}$1`); } catch (e) { /* not there yet: good */ }
+    const w = await (await d.getFileHandle(fname, { create: true })).createWritable();
+    await w.write(blob); await w.close();
+  }
+
   function start() {
     if (!window.Peer) { $('status').textContent = '連不到傳送服務，請確認電腦有網路後重新整理。'; return; }
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -102,14 +130,15 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--yellow);outline-off
     peer.on('connection', (conn) => {
       let finished = false;
       $('status').textContent = '手機連上了！';
-      conn.on('data', (d) => {
+      conn.on('data', async (d) => {
         if (!d) return;
         if (d.hello) { $('status').textContent = `手機要傳 ${d.total} 段影片…`; $('bar').style.width = '0'; return; }
         if (d.done) { finished = true; $('status').textContent = '全部收到了！在電腦的「下載」資料夾。'; return; }
         if (d.data) {
           const blob = new Blob([d.data], { type: d.type || 'video/mp4' });
           const f = { name: d.name || ('小鶴彩券行_' + Date.now() + '.mp4'), url: URL.createObjectURL(blob), size: blob.size };
-          files.push(f); addRow(f); download(f);
+          files.push(f); addRow(f);
+          if (dir) { try { await saveSorted(f.name, blob); } catch (e) { download(f); } } else download(f);
           $('bar').style.width = ((d.i + 1) / d.total * 100) + '%';
           $('status').textContent = `收到 ${d.i + 1} / ${d.total}`;
           conn.send({ ack: d.i });

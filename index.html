@@ -398,6 +398,12 @@ img{max-width:100%}
 .vid video{aspect-ratio:9/16}
 .vid-btns{flex-wrap:wrap}
 .vid-state{font-size:12px;color:var(--muted-ink)}
+.vtabs{display:flex;gap:6px;flex-wrap:wrap}
+.vtab{border:1.5px solid #d8c9a5;background:#fffdf6;color:var(--ink);border-radius:99px;padding:6px 14px;cursor:pointer;font:inherit;font-size:14px}
+.vtab[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow-deep)}
+.vtab b{font-family:var(--num);font-weight:400;margin-left:2px}
+.vtab:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.newtag{display:inline-block;background:var(--hot);color:#fff;border-radius:99px;padding:0 8px;font-size:11px;margin-left:6px;vertical-align:middle}
 .vid-state.ok{color:#1f8a57}
 .xfer-code{font-family:var(--num);font-size:36px;letter-spacing:.2em;text-align:center;width:100%;border:2px solid var(--ink);border-radius:12px;padding:8px;background:#fff;color:var(--ink)}
 .xfer-bar{height:10px;border-radius:99px;background:#eadfc4;overflow:hidden}
@@ -682,6 +688,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     <div class="vid-top"><h3 id="vidTitle">回憶影片</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="xferBtn" type="button">傳到電腦</button><button class="btn y" id="saveAll" type="button">全部存到相簿</button></div></div>
     <p>每段影片錄完就存在這支手機的遊戲裡，遊戲當掉或重新整理也不會不見。要留一輩子的話，按「存到相簿」（iPhone 選「儲存影片」）或「傳到電腦」。</p>
+    <div class="vtabs" id="vidTabs" role="group" aria-label="影片分類"></div>
     <div class="vids" id="vids"></div>
     <p class="empty" id="vidEmpty">還沒有影片。走進店裡挑彩券、每刮一張的過程都會錄在這裡。</p>
     <div class="row"><button class="btn" id="vidClose" type="button">回到桌子</button></div>
@@ -2061,6 +2068,8 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     if (!stored) toast('手機空間可能不夠，這段影片只是暫存，請馬上按「存到相簿」', true);
     else toast(meta.kind === 'intro' ? '感言存好了！' : meta.kind === 'enter' ? '進場影片存好了！' : meta.kind === 'pick' ? `台詞 ${meta.n} 存好了` : '反應存好了');
     offerSave(clip);
+    // a clip from the phone's camera app has no prize on it yet: burn the result in right away
+    setTimeout(() => burnIn(clip.id), meta.kind === 'enter' ? 2200 : 400);
     if (meta.kind === 'enter') { state.entryDone = true; save(); $('gateOv').hidden = true; walkIn(); }
     else if (meta.kind === 'intro') finishIntro();
     else if (meta.kind === 'pick') pickLinesByApp(meta.n);
@@ -2082,23 +2091,48 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       ? { big: '開場感言', small: `帶 NT$${fmt(c.brought || 0)} 進場 · ${stamp(c.at)}` }
       : { big: c.prize > 0 ? `中了 NT$${fmt(c.prize)}` : '銘謝惠顧', small: `${c.price} 元 ${c.name} · ${c.game} · ${stamp(c.at)}` };
   }
+  // the wall is split: 中獎 (biggest prize first), 銘謝惠顧 and 進場・結算 (newest first)
+  const VTABS = [['win', '中獎'], ['lose', '銘謝惠顧'], ['other', '進場・結算']];
+  const groupOf = (c) => c.kind === 'win' ? (c.prize > 0 ? 'win' : 'lose') : 'other';
+  let vidTab = 'win', tabList = [];
+  const newestClip = () => clips.reduce((m, c) => (!m || c.at > m.at ? c : m), null);
   function renderVids() {
     urls.splice(0).forEach(u => URL.revokeObjectURL(u));
+    const groups = { win: [], lose: [], other: [] };
+    clips.forEach(c => groups[groupOf(c)].push(c));
+    groups.win.sort((a, b) => b.prize - a.prize || b.at - a.at);
+    groups.lose.sort((a, b) => b.at - a.at);
+    groups.other.sort((a, b) => b.at - a.at);
+    if (!groups[vidTab].length) vidTab = (VTABS.find(([k]) => groups[k].length) || ['win'])[0];
+    $('vidTabs').innerHTML = VTABS.map(([k, label]) =>
+      `<button type="button" class="vtab" data-tab="${k}" aria-pressed="${k === vidTab}">${label} <b>${groups[k].length}</b></button>`).join('');
+    tabList = groups[vidTab];
+    const fresh = newestClip(), isFresh = (c) => fresh && c.id === fresh.id && Date.now() - c.at < 10 * 60 * 1000;
     $('vidEmpty').hidden = clips.length > 0;
-    $('saveAll').hidden = clips.length < 2;
-    $('vids').innerHTML = clips.map(c => {
+    $('saveAll').hidden = tabList.length < 2;
+    $('saveAll').textContent = `這 ${tabList.length} 段存到相簿`;
+    $('vids').innerHTML = tabList.map(c => {
       const u = URL.createObjectURL(c.blob); urls.push(u);
       const cap = caption(c);
       const btns = c.burned === false
         ? `<button class="btn ghost" type="button" data-burn="${c.id}">印上獎項</button><button class="btn y" type="button" data-save="${c.id}">存原始檔</button>`
         : `<button class="btn y" type="button" data-save="${c.id}">存到相簿</button>`;
       return `<figure class="vid"><video src="${u}" controls playsinline preload="metadata"></video>
-        <figcaption><b>${cap.big}</b><span>${cap.small}</span>
+        <figcaption><b>${cap.big}${isFresh(c) ? '<span class="newtag">剛錄好</span>' : ''}</b><span>${cap.small}</span>
           <span class="vid-state${c.saved || c.sent ? ' ok' : ''}">${[c.saved && '已存相簿', c.sent && '已傳電腦'].filter(Boolean).join(' · ') || '還沒備份'}</span></figcaption>
         <div class="vid-btns"><button class="btn ghost" type="button" data-del="${c.id}">刪除</button>${btns}</div></figure>`;
     }).join('');
   }
-  async function openVids() { await refreshClips(); renderVids(); $('vidOv').hidden = false; }
+  async function openVids() {
+    await refreshClips();
+    const fresh = newestClip();   // just recorded something? open on its tab so it's right there
+    if (fresh && Date.now() - fresh.at < 10 * 60 * 1000) vidTab = groupOf(fresh);
+    renderVids(); $('vidOv').hidden = false; $('vids').scrollTop = 0;
+  }
+  $('vidTabs').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tab]'); if (!b) return;
+    vidTab = b.dataset.tab; $('vids').querySelectorAll('video').forEach(v => v.pause()); renderVids(); $('vids').scrollTop = 0;
+  });
   $('vidBtn').addEventListener('click', openVids);
   $('endVid').addEventListener('click', openVids);
   $('vidClose').addEventListener('click', () => { $('vidOv').hidden = true; $('vids').querySelectorAll('video').forEach(v => v.pause()); });
@@ -2111,7 +2145,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       await delClip(del.dataset.del); await refreshClips(); renderVids();
     }
   });
-  $('saveAll').addEventListener('click', () => { if (clips.length) shareClips(clips); });
+  $('saveAll').addEventListener('click', () => { if (tabList.length) shareClips(tabList); });   // the tab on screen
 
   // --- saving to the phone ---
   const extOf = (b) => /mp4/.test(b.type) ? 'mp4' : /webm/.test(b.type) ? 'webm' : /quicktime/.test(b.type) ? 'mov' : 'mp4';
@@ -2257,8 +2291,14 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       const chunks = [];
       rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
       const stopped = new Promise(res => { rec.onstop = res; });
-      const limit = c.kind === 'intro' ? 15 : 10, cap = caption(c);
-      const frame = () => { drawCover(g, v, W, H, false); drawBanner(g, W, H, cap); };
+      const limit = 15, cap = caption(c), PH = Math.round(H * .5);
+      // a ticket clip gets the same split screen as live ones: the result card on top, the clip below
+      let pc = null;
+      if (c.kind === 'win') { pc = document.createElement('canvas'); pc.width = W; pc.height = PH; drawResultPanel(pc.getContext('2d'), 0, 0, W, PH, c); }
+      const frame = () => {
+        if (pc) { g.drawImage(pc, 0, 0); drawCoverRect(g, v, 0, PH, W, H - PH, false); } else drawCover(g, v, W, H, false);
+        drawBanner(g, W, H, cap);
+      };
       frame();
       await v.play();
       rec.start(250);
@@ -2472,6 +2512,30 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     let fs = Math.round(resH * .4);
     do { g.font = `${fs}px ${rootTok('--body')}`; } while (g.measureText(rt).width > W - 24 && --fs > 11);
     g.fillText(rt, X + W / 2, Y + H - resH / 2);
+  }
+  // the result card used for clips recorded with the phone's camera app (the live ticket isn't there to mirror)
+  function drawResultPanel(g, X, Y, W, H, c) {
+    const type = String(c.ticketId || '').split('-')[0] || 't10';
+    const tk = rootTok('--' + type) || rootTok('--red'), soft = rootTok('--' + type + '-soft') || '#fff8e6', ink = rootTok('--' + type + '-ink') || '#1d1512';
+    const win = c.prize > 0, hh = Math.round(H * .13);
+    g.fillStyle = soft; g.fillRect(X, Y, W, H);
+    g.fillStyle = tk; g.fillRect(X, Y, W, hh);
+    g.fillStyle = '#fff8e6'; g.textBaseline = 'middle';
+    g.textAlign = 'left'; g.font = `${Math.round(hh * .42)}px ${rootTok('--body')}`; g.fillText(c.name || '', X + 212, Y + hh / 2);
+    g.textAlign = 'right'; g.font = `${Math.round(hh * .5)}px ${rootTok('--num')}`; g.fillText(`${c.price || ''} 元`, X + W - 16, Y + hh / 2);
+    g.textAlign = 'center'; g.fillStyle = ink;
+    g.font = `22px ${rootTok('--body')}`; g.fillText(`玩法：${c.game || ''}`, X + W / 2, Y + hh + 42);
+    g.fillStyle = win ? rootTok('--red') : ink;
+    g.font = win ? `66px ${rootTok('--num')}` : `900 56px ${rootTok('--sign-font')}`;
+    g.fillText(win ? `NT$${fmt(c.prize)}` : '銘謝惠顧', X + W / 2, Y + H * .55);
+    g.fillStyle = ink; g.font = `26px ${rootTok('--body')}`;
+    g.fillText(win ? '中獎了！' : '下一張一定中', X + W / 2, Y + H * .55 + 64);
+    g.globalAlpha = .7; g.font = `16px ${rootTok('--body')}`; g.fillText(c.serial || '', X + W / 2, Y + H - 22); g.globalAlpha = 1;
+    g.save(); g.translate(X + W - 86, Y + hh + 78); g.rotate(-14 * Math.PI / 180);
+    g.strokeStyle = g.fillStyle = win ? '#d7262e' : '#6f6a80'; g.lineWidth = 6;
+    g.beginPath(); g.arc(0, 0, 50, 0, Math.PI * 2); g.stroke();
+    g.font = `900 ${win ? 32 : 19}px ${rootTok('--sign-font')}`; g.fillText(win ? '中獎' : '銘謝惠顧', 0, 2);
+    g.restore();
   }
   // the ending: the 5200 card, then the coin game with the coin actually flipping
   let coinAnim = null, endingRec = false;
