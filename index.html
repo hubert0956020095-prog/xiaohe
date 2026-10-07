@@ -386,7 +386,7 @@ body{margin:0;-webkit-tap-highlight-color:transparent}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 img{max-width:100%}
 /* ---- live camera ---- */
-.pip{position:fixed;left:12px;top:calc(48px + env(safe-area-inset-top,0px));z-index:62;width:100px;aspect-ratio:3/4;border-radius:14px;overflow:hidden;
+.pip{position:fixed;left:12px;top:calc(48px + env(safe-area-inset-top,0px));z-index:62;width:84px;aspect-ratio:9/16;border-radius:14px;overflow:hidden;
   border:3px solid var(--hot);box-shadow:0 8px 20px rgba(0,0,0,.5);background:#000;animation:pipIn .35s cubic-bezier(.3,1.4,.5,1)}
 @keyframes pipIn{from{transform:scale(.4);opacity:0}}
 .pip video,.intro-stage video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
@@ -394,7 +394,15 @@ img{max-width:100%}
 .rec-badge i{width:8px;height:8px;border-radius:50%;background:var(--hot);animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.2}}
 .pip-cap{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(158,24,32,.92));color:var(--yellow);font-family:var(--num);font-size:11px;text-align:center;padding:12px 2px 4px}
-.intro-stage{position:relative;width:100%;max-width:260px;align-self:center;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:#000;border:3px solid var(--yellow)}
+.vids{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.vid video{aspect-ratio:9/16}
+.vid-btns{flex-wrap:wrap}
+.vid-state{font-size:12px;color:var(--muted-ink)}
+.vid-state.ok{color:#1f8a57}
+.xfer-code{font-family:var(--num);font-size:36px;letter-spacing:.2em;text-align:center;width:100%;border:2px solid var(--ink);border-radius:12px;padding:8px;background:#fff;color:var(--ink)}
+.xfer-bar{height:10px;border-radius:99px;background:#eadfc4;overflow:hidden}
+.xfer-bar i{display:block;height:100%;width:0;background:var(--win);transition:width .3s}
+.intro-stage{position:relative;width:100%;max-width:200px;align-self:center;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000;border:3px solid var(--yellow)}
 .intro-stage .rec-badge{font-size:16px;top:10px;left:10px}
 .snd.cam{right:auto;left:12px}
 .script{background:#fff6dc;border:2px dashed var(--yellow-deep);border-radius:12px;padding:10px 12px;font-size:18px;line-height:1.6;color:var(--ink);text-wrap:balance}
@@ -645,8 +653,9 @@ img{max-width:100%}
 <!-- memory wall -->
 <div class="overlay" id="vidOv" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="vidTitle" style="max-width:760px">
-    <div class="vid-top"><h3 id="vidTitle">回憶影片</h3><button class="btn y" id="saveAll" type="button">全部存到相簿</button></div>
-    <p>影片存在這支手機的遊戲裡，畫面下方印著當下抽到的獎。按「存到相簿」iPhone 會跳出分享選單，選「儲存影片」。</p>
+    <div class="vid-top"><h3 id="vidTitle">回憶影片</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="xferBtn" type="button">傳到電腦</button><button class="btn y" id="saveAll" type="button">全部存到相簿</button></div></div>
+    <p>每段影片錄完就存在這支手機的遊戲裡，遊戲當掉或重新整理也不會不見。要留一輩子的話，按「存到相簿」（iPhone 選「儲存影片」）或「傳到電腦」。</p>
     <div class="vids" id="vids"></div>
     <p class="empty" id="vidEmpty">還沒有影片。進門前的感言、開始挑彩券的台詞、每刮開一張的反應都會錄在這裡。</p>
     <div class="row"><button class="btn" id="vidClose" type="button">回到桌子</button></div>
@@ -691,6 +700,16 @@ img{max-width:100%}
   <div class="cue-top"><span class="rec-badge"><i></i><span id="cueCount">準備</span></span><b id="cueTitle">開始挑彩券｜台詞 1 / 2</b></div>
   <p class="cue-line" id="cueLine"></p>
   <div class="cue-btns"><button class="btn ghost" id="cueSkip" type="button">不錄了</button><button class="btn y" id="cueDone" type="button" disabled>說完了</button></div>
+</div>
+<div class="overlay" id="xferOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="xferTitle">
+    <h3 id="xferTitle">把影片傳到電腦</h3>
+    <p>在電腦打開 <b id="xferUrl"></b>，把畫面上的 6 位數號碼輸入在這裡。電腦收到的影片會自動存進「下載」資料夾。手機和電腦連同一個 Wi-Fi 最快。</p>
+    <input class="xfer-code" id="xferCode" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="off" aria-label="電腦上的 6 位數號碼">
+    <p class="empty" id="xferMsg"></p>
+    <div class="xfer-bar"><i id="xferBar"></i></div>
+    <div class="row"><button class="btn ghost" id="xferClose" type="button">關閉</button><button class="btn y" id="xferGo" type="button">開始傳送</button></div>
+  </div>
 </div>
 <button class="snd cam" id="camBtn" type="button" aria-pressed="true">鏡頭 開</button>
 <button class="snd" id="sndBtn" type="button" aria-pressed="true">聲音 開</button>
@@ -1561,7 +1580,9 @@ img{max-width:100%}
     const byId = new Map(list.map(c => [c.id, c]));
     memClips.forEach((c, id) => byId.set(id, c));
     clips = [...byId.values()].sort((x, y) => x.at - y.at);
-    $('vidBtn').textContent = clips.length ? `影片 ${clips.length}` : '影片';
+    const pend = clips.filter(c => !c.saved && !c.sent).length;   // not in the photo album or on the computer yet
+    $('vidBtn').innerHTML = (clips.length ? `影片 ${clips.length}` : '影片') + (pend ? `<span class="badge">${pend}</span>` : '');
+    return pend;
   }
 
   // --- live camera ---
@@ -1576,6 +1597,8 @@ img{max-width:100%}
       catch (e2) { CAM.stream = null; return false; }
     }
     for (const id of ['pipVideo', 'introVideo']) { const v = $(id); v.srcObject = CAM.stream; v.muted = true; v.play().catch(() => {}); }
+    // ask the browser not to clear stored clips when the phone runs low on space
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     return true;
   }
   function camStop() {
@@ -1604,9 +1627,7 @@ img{max-width:100%}
     const mime = pickMime();
     if (!mime || !live()) return Promise.resolve(null);
     return new Promise((resolve) => {
-      const vw = videoEl.videoWidth || 480, vh = videoEl.videoHeight || 640;
-      const scale = Math.min(1, 640 / Math.max(vw, vh));   // ~150 clips per table: keep each one small
-      const W = Math.round(vw * scale / 2) * 2, H = Math.round(vh * scale / 2) * 2;
+      const W = 540, H = 960;   // always portrait 9:16 like a phone video; the camera frame is cropped to fill it
       const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H;
       const g = cnv.getContext('2d');
       let out, burned = true;
@@ -1623,7 +1644,7 @@ img{max-width:100%}
       const left = () => Math.ceil(Math.max(0, seconds - (performance.now() - t0) / 1000));
       let rafId = 0, tickId = 0, timer = 0, stopped = false;
       const draw = () => {
-        g.save(); g.translate(W, 0); g.scale(-1, 1); g.drawImage(videoEl, 0, 0, W, H); g.restore();   // mirrored, like a selfie
+        drawCover(g, videoEl, W, H, true);   // mirrored, like a selfie
         drawBanner(g, W, H, cap);
         rafId = requestAnimationFrame(draw);
       };
@@ -1661,7 +1682,12 @@ img{max-width:100%}
     const clip = await recordLive({ kind: 'win', ticketId: k.id, prize: k.prize, name: t.name, price: t.price, game: GAMES[t.game].name, serial: k.serial },
       10, pv, (sec) => { if (gen === pipGen) $('pipCount').textContent = sec; });
     if (gen === pipGen) $('pip').hidden = true;
-    if (clip) { if (k.prize > 0) toast('反應錄好了，收在「影片」裡'); if (cur && cur.id === k.id) showResult(cur, false); }
+    if (clip) {
+      const pend = clips.filter(c => !c.saved && !c.sent).length;
+      if (pend && pend % 15 === 0) toast(`有 ${pend} 段影片還沒備份，有空打開「影片」存起來`);
+      else if (k.prize > 0) toast('反應錄好了，收在「影片」裡');
+      if (cur && cur.id === k.id) showResult(cur, false);
+    }
   }
 
   // --- two short lines when she starts picking: recorded in the PiP bubble while she browses the table ---
@@ -1789,7 +1815,8 @@ img{max-width:100%}
         ? `<button class="btn ghost" type="button" data-burn="${c.id}">印上獎項</button><button class="btn y" type="button" data-save="${c.id}">存原始檔</button>`
         : `<button class="btn y" type="button" data-save="${c.id}">存到相簿</button>`;
       return `<figure class="vid"><video src="${u}" controls playsinline preload="metadata"></video>
-        <figcaption><b>${cap.big}</b><span>${cap.small}</span></figcaption>
+        <figcaption><b>${cap.big}</b><span>${cap.small}</span>
+          <span class="vid-state${c.saved || c.sent ? ' ok' : ''}">${[c.saved && '已存相簿', c.sent && '已傳電腦'].filter(Boolean).join(' · ') || '還沒備份'}</span></figcaption>
         <div class="vid-btns"><button class="btn ghost" type="button" data-del="${c.id}">刪除</button>${btns}</div></figure>`;
     }).join('');
   }
@@ -1825,13 +1852,87 @@ img{max-width:100%}
     const files = list.map(c => new File([c.blob], fileName(c), { type: c.blob.type || 'video/mp4' }));
     if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
       navigator.share({ files, title: '小鶴彩券行' }).then(
-        () => toast('存好了'),
-        (e) => { if (e && e.name === 'AbortError') toast('沒有存'); else downloadFiles(files); });
+        () => { toast('存好了'); markClips(list, 'saved'); },
+        (e) => { if (e && e.name === 'AbortError') toast('沒有存'); else { downloadFiles(files); markClips(list, 'saved'); } });
       return;
     }
     downloadFiles(files);
+    markClips(list, 'saved');
+  }
+  async function markClips(list, field) {
+    for (const c of list) { c[field] = true; await putClip(c); }
+    await refreshClips();
+    if (!$('vidOv').hidden) renderVids();
   }
 
+  // --- send clips to the computer (receive.html) over a direct WebRTC link; PeerJS's public server only introduces the two ---
+  const PEER_SRC = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+  let xferBusy = false;
+  function loadPeer() {
+    return window.Peer ? Promise.resolve() : new Promise((res, rej) => {
+      const sc = document.createElement('script'); sc.src = PEER_SRC; sc.onload = res; sc.onerror = () => rej(new Error('load'));
+      document.head.appendChild(sc);
+    });
+  }
+  function openXfer() {
+    $('xferUrl').textContent = new URL('receive.html', location.href).href.replace(/^https?:\/\//, '');
+    const left = clips.filter(c => !c.sent).length;
+    $('xferMsg').textContent = !clips.length ? '還沒有影片可以傳。' : left ? `有 ${left} 段影片還沒傳過。` : '全部都傳過了，再傳一次會整批重傳。';
+    $('xferBar').style.width = '0';
+    $('xferOv').hidden = false;
+  }
+  $('xferBtn').addEventListener('click', openXfer);
+  $('xferClose').addEventListener('click', () => { if (!xferBusy) $('xferOv').hidden = true; });
+  $('xferGo').addEventListener('click', async () => {
+    const code = $('xferCode').value.replace(/\D/g, '');
+    if (code.length !== 6) { $('xferMsg').textContent = '請輸入電腦畫面上的 6 位數號碼。'; return; }
+    if (xferBusy) return;
+    const unsent = clips.filter(c => !c.sent), todo = unsent.length ? unsent : clips.slice();
+    if (!todo.length) { $('xferMsg').textContent = '還沒有影片可以傳。'; return; }
+    xferBusy = true; $('xferGo').disabled = true;
+    let peer = null;
+    const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
+    try {
+      $('xferMsg').textContent = '連線中…';
+      await loadPeer();
+      peer = new Peer();
+      await Promise.race([new Promise((res, rej) => { peer.on('open', res); peer.on('error', rej); }), timeout(15000)]);
+      const conn = peer.connect('xiaohe-' + code, { reliable: true, serialization: 'binary' });
+      await Promise.race([new Promise((res, rej) => { conn.on('open', res); conn.on('error', rej); peer.on('error', rej); }), timeout(20000)]);
+      let waiting = null;
+      conn.on('data', (d) => { if (d && d.ack != null && waiting) { const w = waiting; waiting = null; w(); } });
+      conn.send({ hello: true, total: todo.length });
+      for (let i = 0; i < todo.length; i++) {
+        const c = todo[i];
+        $('xferMsg').textContent = `傳送中 ${i + 1} / ${todo.length}：${fileName(c)}`;
+        const data = await c.blob.arrayBuffer();
+        const acked = new Promise((res) => { waiting = res; });
+        conn.send({ i, total: todo.length, name: fileName(c), type: c.blob.type || 'video/mp4', data });
+        await Promise.race([acked, timeout(180000)]);
+        c.sent = true; await putClip(c);
+        $('xferBar').style.width = ((i + 1) / todo.length * 100) + '%';
+      }
+      conn.send({ done: true });
+      $('xferMsg').textContent = `${todo.length} 段影片都傳到電腦了，在電腦的「下載」資料夾。`;
+      SFX.coinDrop();
+    } catch (e) {
+      $('xferMsg').textContent = e && e.type === 'peer-unavailable' ? '找不到這組號碼。確認電腦上的接收頁還開著、號碼沒有打錯。'
+        : e && e.message === 'load' ? '連不到傳送服務，請確認手機有網路。'
+        : '傳送中斷了。已經傳完的不會重傳，再按一次「開始傳送」就會接著傳。';
+    }
+    await refreshClips(); if (!$('vidOv').hidden) renderVids();
+    setTimeout(() => { try { peer && peer.destroy(); } catch (e) {} }, 3000);
+    xferBusy = false; $('xferGo').disabled = false;
+  });
+
+  // fill the W x H frame with the video, cropping whatever sticks out (landscape cameras included)
+  function drawCover(g, v, W, H, mirror) {
+    const vw = v.videoWidth || W, vh = v.videoHeight || H, k = Math.max(W / vw, H / vh), dw = vw * k, dh = vh * k;
+    g.save();
+    if (mirror) { g.translate(W, 0); g.scale(-1, 1); }
+    g.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    g.restore();
+  }
   // Clips from the phone's camera app have no banner yet: replay one into a canvas with the banner and record it.
   function drawBanner(g, W, H, cap) {
     const css = getComputedStyle(document.documentElement);
@@ -1861,9 +1962,8 @@ img{max-width:100%}
     let ac = null;
     try {
       await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('load')); });
-      const scale = Math.min(1, 720 / Math.max(v.videoWidth, v.videoHeight));
-      const W = Math.round(v.videoWidth * scale / 2) * 2, H = Math.round(v.videoHeight * scale / 2) * 2;
-      if (!W || !H) throw new Error('size');
+      if (!v.videoWidth || !v.videoHeight) throw new Error('size');
+      const W = 540, H = 960;
       const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H;
       $('mkStage').appendChild(cnv);
       const g = cnv.getContext('2d');
@@ -1880,7 +1980,7 @@ img{max-width:100%}
       rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
       const stopped = new Promise(res => { rec.onstop = res; });
       const limit = c.kind === 'intro' ? 15 : 10, cap = caption(c);
-      const frame = () => { g.drawImage(v, 0, 0, W, H); drawBanner(g, W, H, cap); };
+      const frame = () => { drawCover(g, v, W, H, false); drawBanner(g, W, H, cap); };
       frame();
       await v.play();
       rec.start(250);
