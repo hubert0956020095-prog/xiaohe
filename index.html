@@ -478,7 +478,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     <div class="floor"></div>
   </div>
   <button class="enter" id="enterBtn" type="button">推門進去</button>
-  <p class="hint-line" id="frontHint">推門前會先錄一段開場台詞 · 點門走進店裡</p>
+  <p class="hint-line" id="frontHint">小鶴彩券行全程錄影 · 點門走進店裡</p>
 </section>
 <div class="whiteout" id="whiteout"><span class="welcome">歡迎光臨</span></div>
 
@@ -682,12 +682,20 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="xferBtn" type="button">傳到電腦</button><button class="btn y" id="saveAll" type="button">全部存到相簿</button></div></div>
     <p>每段影片錄完就存在這支手機的遊戲裡，遊戲當掉或重新整理也不會不見。要留一輩子的話，按「存到相簿」（iPhone 選「儲存影片」）或「傳到電腦」。</p>
     <div class="vids" id="vids"></div>
-    <p class="empty" id="vidEmpty">還沒有影片。進門前的感言、開始挑彩券的台詞、每刮開一張的反應都會錄在這裡。</p>
+    <p class="empty" id="vidEmpty">還沒有影片。走進店裡挑彩券、每刮一張的過程都會錄在這裡。</p>
     <div class="row"><button class="btn" id="vidClose" type="button">回到桌子</button></div>
   </div>
 </div>
 <input class="vh" id="camInput" type="file" accept="video/*" capture="user" tabindex="-1" aria-hidden="true">
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="overlay" id="gateOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <h3 id="gateTitle">要開鏡頭才能進店喔</h3>
+    <p>小鶴彩券行全程錄影。按「再試一次」，手機問的時候選「允許」相機和麥克風。</p>
+    <p class="empty">手機沒有再問的話：iPhone 在 Safari 網址列按「大小」→「網站設定」，把相機、麥克風改成允許；Android 點網址列左邊的鎖頭 →「權限」。</p>
+    <div class="row"><button class="btn ghost" id="gateApp" type="button">改用手機相機錄進場</button><button class="btn y" id="gateRetry" type="button">再試一次</button></div>
+  </div>
+</div>
 <div class="overlay" id="resetOv" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
     <h3 id="resetTitle">重新開始？</h3>
@@ -1026,7 +1034,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('wIn').textContent = fmt(state.brought);
     $('wNet').textContent = (net > 0 ? '+' : net < 0 ? '−' : '') + fmt(Math.abs(net));
     $('wNetBox').classList.toggle('neg', net < 0);
-    $('frontHint').textContent = state.brought ? `錢包裡還有 NT$${fmt(state.wallet)} · 點門走進店裡` : '推門前會先錄一段開場台詞 · 點門走進店裡';
+    $('frontHint').textContent = state.brought ? `錢包裡還有 NT$${fmt(state.wallet)} · 點門走進店裡` : '小鶴彩券行全程錄影 · 點門走進店裡';
     const allDone = state.tickets.every(k => k.revealed);
     $('endCard').hidden = !allDone;
     if (allDone) {
@@ -1066,6 +1074,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     if (selected.has(id)) { selected.delete(id); b.setAttribute('aria-pressed', 'false'); SFX.unpick(); if (rand() < .5) say(pickOne(LINES.unpick)); }
     else {
       selected.add(id); b.setAttribute('aria-pressed', 'true'); SFX.pick(); say(pickOne(LINES.pick));
+      stopEntryRec();
       const r = b.getBoundingClientRect(); burst(10, { kind: 'star', x: r.left + r.width / 2, y: r.top + r.height / 2, power: .45 });
     }
     renderBar();
@@ -1076,7 +1085,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   function enter() {
     if (entering) return;
     if (!state.brought) { openBring('enter'); return; }
-    walkIn();
+    enterShop();
   }
   function walkIn() {
     if (entering) return; entering = true;
@@ -1093,7 +1102,6 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       SFX.bgmStart();
       say('歡迎光臨小鶴彩券行～桌上的刮刮樂隨便挑，挑好拿來結帳。');
       entering = false;
-      setTimeout(startPickLines, 1800);
     }, reduce ? 50 : 1250);
     setTimeout(() => $('whiteout').classList.remove('on'), reduce ? 60 : 1900);
   }
@@ -1136,14 +1144,13 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     if (!$('inside').hidden) floatText(`+NT$${fmt(v)}`, $('wBal'), 'plus');
     save(); render();
     $('bringOv').hidden = true;
-    if (bringMode === 'enter') { if (state.introAsked) walkIn(); else openIntro(); }
+    if (bringMode === 'enter') enterShop();
     else { say(`錢包多了 NT$${fmt(v)}，繼續挑吧`); if (bringThen) bringThen(); }
   });
   $('addMoney').addEventListener('click', () => openBring('add'));
 
   // ---------- checkout ----------
   $('checkout').addEventListener('click', () => {
-    if (cueRunning || (!state.pickLinesDone && scene === 'inside')) { toast('先把兩段開場台詞錄完，才能結帳喔'); startPickLines(); return; }
     const picks = [...selected].map(byId).filter(k => k && !k.sold);
     if (!picks.length) return;
     const groups = state.config.map(t => ({ t, n: picks.filter(k => k.type === t.id).length })).filter(g => g.n);
@@ -2003,9 +2010,10 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     const stored = await putClip(clip);
     await refreshClips();
     if (!stored) toast('手機空間可能不夠，這段影片只是暫存，請馬上按「存到相簿」', true);
-    else toast(meta.kind === 'intro' ? '感言存好了！' : meta.kind === 'pick' ? `台詞 ${meta.n} 存好了` : '反應存好了');
+    else toast(meta.kind === 'intro' ? '感言存好了！' : meta.kind === 'enter' ? '進場影片存好了！' : meta.kind === 'pick' ? `台詞 ${meta.n} 存好了` : '反應存好了');
     offerSave(clip);
-    if (meta.kind === 'intro') finishIntro();
+    if (meta.kind === 'enter') { state.entryDone = true; save(); $('gateOv').hidden = true; walkIn(); }
+    else if (meta.kind === 'intro') finishIntro();
     else if (meta.kind === 'pick') pickLinesByApp(meta.n);
     else if (cur && meta.ticketId === cur.id) showResult(cur, false);
   });
@@ -2019,6 +2027,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   const stamp = (at) => { const d = new Date(at); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   function caption(c) {
     if (c.kind === 'pick') return { big: `挑彩券台詞 ${c.n}`, small: `小鶴彩券行 · 開始挑彩券 · ${stamp(c.at)}` };
+    if (c.kind === 'enter') return { big: '走進小鶴彩券行', small: `帶 NT$${fmt(c.brought || 0)} 進場 · ${stamp(c.at)}` };
     return c.kind === 'intro'
       ? { big: '開場感言', small: `帶 NT$${fmt(c.brought || 0)} 進場 · ${stamp(c.at)}` }
       : { big: c.prize > 0 ? `中了 NT$${fmt(c.prize)}` : '銘謝惠顧', small: `${c.price} 元 ${c.name} · ${c.game} · ${stamp(c.at)}` };
@@ -2056,7 +2065,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
 
   // --- saving to the phone ---
   const extOf = (b) => /mp4/.test(b.type) ? 'mp4' : /webm/.test(b.type) ? 'webm' : /quicktime/.test(b.type) ? 'mov' : 'mp4';
-  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言' : c.kind === 'pick' ? `小鶴彩券行_挑彩券台詞${c.n}`
+  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言' : c.kind === 'enter' ? `小鶴彩券行_進場_${c.at}` : c.kind === 'pick' ? `小鶴彩券行_挑彩券台詞${c.n}`
     : `小鶴彩券行_${c.prize > 0 ? `中獎NT${c.prize}` : '銘謝惠顧'}_${c.serial.replace(/[^0-9A-Za-z-]/g, '')}`) + '.' + extOf(c.blob);
   function downloadFiles(files) {
     files.forEach((f, i) => setTimeout(() => {
@@ -2297,6 +2306,34 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     showScene('front');
     toast('重新開始了！影片都還在');
   });
+
+  // the door: no camera, no entry
+  async function enterShop() {
+    if (state.entryDone) { walkIn(); return; }
+    if (await camStart()) { startEntryRec(); walkIn(); return; }
+    $('gateOv').hidden = false;
+  }
+  $('gateRetry').addEventListener('click', async () => {
+    if (await camStart()) { $('gateOv').hidden = true; startEntryRec(); walkIn(); }
+    else toast('還是沒有鏡頭權限，照上面的方法打開，或改用手機相機錄進場');
+  });
+  $('gateApp').addEventListener('click', () => startRecord({ kind: 'enter', brought: state.brought }));
+  // one clip from the door until the first ticket she picks
+  async function startEntryRec() {
+    if (state.entryDone || (CAM.active && CAM.active.meta && CAM.active.meta.kind === 'enter')) return;
+    const gen = ++pipGen, pv = $('pipVideo');
+    $('pipCap').textContent = '進場中…'; $('pip').hidden = false; pv.play().catch(() => {});
+    await waitMeta(pv);
+    const clip = await recordLive({ kind: 'enter', brought: state.brought }, 180, pv, (sec, el) => { if (gen === pipGen) $('pipCount').textContent = `${el}s`; });
+    if (gen === pipGen) $('pip').hidden = true;
+    if (clip) toast('進場影片存好了！');
+  }
+  function stopEntryRec() {
+    if (state.entryDone) return;
+    state.entryDone = true; save();
+    const act = CAM.active;
+    if (act && act.meta && act.meta.kind === 'enter') act.stopIn(1.5);
+  }
 
   // all foil scratched off: show the whole ticket, but say nothing about the result until 兌獎
   function allScratched(fromOpen) {
