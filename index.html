@@ -412,6 +412,9 @@ img{max-width:100%}
 .pip.wide video,.intro-stage.wide video{object-fit:contain}
 html,body{overscroll-behavior:none}
 body.scratching{overflow:hidden}
+.redeem{font-size:20px;padding:12px 22px;flex:1 0 100%;animation:redeemPulse 1.2s ease-in-out infinite}
+@keyframes redeemPulse{50%{transform:scale(1.04);box-shadow:0 0 0 6px rgba(255,216,74,.35),0 3px 0 var(--yellow-deep)}}
+@media (prefers-reduced-motion:reduce){.redeem{animation:none}}
 #scratchOv{overscroll-behavior:contain}
 /* while a ticket is open: a strip on top holds the selfie bubble and the save chip, so nothing covers the ticket */
 .pip{pointer-events:none}
@@ -575,6 +578,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     <div class="t-foot"><span id="tSerial">No.</span><span>小鶴彩券行 祝您中獎</span></div>
     <div class="actions">
       <button class="btn ghost" id="revealAll" type="button">一次刮開</button>
+      <button class="btn y redeem" id="redeem" type="button" hidden>兌獎</button>
       <button class="btn y" id="nextTk" type="button" hidden>刮下一張</button>
       <button class="btn" id="closeScratch" type="button">收起來</button>
     </div>
@@ -1180,7 +1184,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('mineEmpty').hidden = list.length > 0;
     $('mylist').innerHTML = list.map(k => {
       const t = typeOf(k.type);
-      const pill = !k.revealed ? '<span class="pill new">還沒刮</span>' : k.prize > 0 ? `<span class="pill win">中 ${fmt(k.prize)}</span>` : '<span class="pill lose">沒中</span>';
+      const pill = !k.revealed ? (k.scratched ? '<span class="pill new">還沒兌獎</span>' : '<span class="pill new">還沒刮</span>') : k.prize > 0 ? `<span class="pill win">中 ${fmt(k.prize)}</span>` : '<span class="pill lose">沒中</span>';
       return `<button class="tk" type="button" data-t="${k.type}" data-id="${k.id}"><span class="chip"></span>
         <span class="meta"><span>${t.name}</span><small>${k.serial}</small></span>${pill}</button>`;
     }).join('');
@@ -1251,6 +1255,8 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('result').innerHTML = '<span class="r1">把銀色的地方全部刮乾淨，自己看有沒有中！</span>';
     $('revealAll').hidden = true;
     $('nextTk').hidden = true;
+    $('redeem').hidden = true;
+    if (k.scratched) { allScratched(true); return; }   // scratched before but not redeemed yet
     foils.forEach(bindFoil);
     requestAnimationFrame(() => foils.forEach(paintFoil));
   }
@@ -1283,7 +1289,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     const pos = (e) => { const r = f.c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     f.c.addEventListener('pointerdown', (e) => {
       if (!cur || cur.revealed || f.done) return;
-      ticketRecStart(cur);
+      armRec(cur);
       f.drawing = true; f.last = pos(e); f.c.setPointerCapture(e.pointerId); scratch(f, f.last);
     });
     f.c.addEventListener('pointermove', (e) => { if (f.drawing) scratch(f, pos(e)); });
@@ -1308,12 +1314,13 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     for (let y = 0; y < h; y += 8) for (let xx = 0; xx < w; xx += 8) { n++; if (d[(y * w + xx) * 4 + 3] < 40) clear++; }
     if (clear / n > .85) {   // a zone counts only when it's almost all scratched off; its foil stays until every zone is done
       f.done = true; f.drawing = false;
-      if (foils.every(o => o.done)) finish(); else SFX.reveal();
+      if (foils.every(o => o.done)) allScratched(false); else SFX.reveal();
     }
   }
 
-  function finish() {
+  function finish() {   // runs when she presses 兌獎
     if (!cur || cur.revealed) return;
+    $('redeem').hidden = true;
     foils.forEach(f => { f.done = true; f.drawing = false; f.c.classList.add('gone'); });
     cur.revealed = true;
     if (cur.prize > 0) { state.won += cur.prize; state.wallet += cur.prize; }
@@ -2290,6 +2297,26 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     showScene('front');
     toast('重新開始了！影片都還在');
   });
+
+  // all foil scratched off: show the whole ticket, but say nothing about the result until 兌獎
+  function allScratched(fromOpen) {
+    if (!cur || cur.revealed) return;
+    foils.forEach(f => { f.done = true; f.drawing = false; f.c.classList.add('gone'); });
+    if (!cur.scratched) { cur.scratched = true; save(); }
+    $('result').className = 'result';
+    $('result').innerHTML = '<span class="r1">全部刮完了！</span><span class="r2" style="font-size:20px">按下面的「兌獎」看有沒有中</span>';
+    $('redeem').hidden = false;
+    lockScratch(false);
+    if (!fromOpen) { SFX.reveal(); say('刮完了？按兌獎看看！'); }
+  }
+  $('redeem').addEventListener('click', () => { if (!cur || !cur.scratched) return; SFX.pick(); finish(); });
+  // recording starts after 2 s of scratching (not at the first touch)
+  let recArm = null;
+  function armRec(k) {
+    if (!k || k.revealed || (recArm && recArm.id === k.id)) return;
+    if (recArm) clearTimeout(recArm.t);
+    recArm = { id: k.id, t: setTimeout(() => { if (cur && cur.id === k.id && !k.revealed) ticketRecStart(k); }, 2000) };
+  }
 
   // ---------- boot ----------
   function start(data) {
