@@ -419,9 +419,10 @@ body.scratching{overflow:hidden}
 /* while a ticket is open: a strip on top holds the selfie bubble and the save chip, so nothing covers the ticket */
 .pip{pointer-events:none}
 body.scratching #scratchOv{padding-top:calc(72px + env(safe-area-inset-top,0px))}
-body.scratching .pip{width:56px;aspect-ratio:1;border-radius:50%;left:12px;top:calc(8px + env(safe-area-inset-top,0px));border-width:3px}
-body.scratching .pip .pip-cap{display:none}
-body.scratching .pip .rec-badge{top:auto;bottom:2px;left:50%;transform:translateX(-50%);font-size:10px;padding:0 5px}
+body.scratching .pip,body.pipmini .pip{width:56px;aspect-ratio:1;border-radius:50%;left:12px;top:calc(8px + env(safe-area-inset-top,0px));border-width:3px}
+body.scratching .pip .pip-cap,body.pipmini .pip .pip-cap{display:none}
+body.scratching .pip .rec-badge,body.pipmini .pip .rec-badge{top:auto;bottom:2px;left:50%;transform:translateX(-50%);font-size:10px;padding:0 5px}
+body.pipmini #finaleOv,body.pipmini #coinOv{padding-top:calc(72px + env(safe-area-inset-top,0px))}
 body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0px));left:auto;right:12px;font-size:12px;padding:7px 12px}
 #scratchOv.locked{overflow:hidden;touch-action:none}
 .script{background:#fff6dc;border:2px dashed var(--yellow-deep);border-radius:12px;padding:10px 12px;font-size:18px;line-height:1.6;color:var(--ink);text-wrap:balance}
@@ -787,7 +788,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   // ---------- sound: everything is synthesized with Web Audio, nothing to download ----------
   const SFX = (() => {
-    let recDest = null, micSrc = null, micFor = null;
+    let recDest = null, micSrc = null, micFor = null, micGain = null, micMeter = null, sfxToRec = null, recComp = null;
     let ac = null, master = null, noiseBuf = null, scratchGain = null, bgmTimer = 0, bgmNext = 0, bgmStep = 0, on = true;
     try { on = localStorage.getItem('xiaohe-sound') !== 'off'; } catch (e) {}
     const N = (m) => 440 * Math.pow(2, (m - 69) / 12);
@@ -876,13 +877,38 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       bgmStop() { clearInterval(bgmTimer); bgmTimer = 0; },
       pause() { try { if (ac && ac.state === 'running') ac.suspend(); } catch (e) {} },
       resume() { try { if (ac && on && ac.state === 'suspended') ac.resume(); } catch (e) {} },
+      // recordings get her voice up front and the game's sounds a little underneath
       recTrack(mic) {
         const a = ctx(); if (!a) return null;
-        if (!recDest) { recDest = a.createMediaStreamDestination(); master.connect(recDest); }
+        if (!recDest) {
+          recDest = a.createMediaStreamDestination();
+          // soft limiter: loud screams and fanfares round off instead of distorting (and nothing gets boosted)
+          recComp = a.createWaveShaper();
+          const curve = new Float32Array(2048);
+          for (let i = 0; i < curve.length; i++) { const x = i / (curve.length - 1) * 2 - 1; curve[i] = Math.tanh(x * 1.2) / Math.tanh(1.2); }
+          recComp.curve = curve; recComp.oversample = '2x';
+          recComp.connect(recDest);
+          sfxToRec = a.createGain(); sfxToRec.gain.value = .6;
+          master.connect(sfxToRec); sfxToRec.connect(recComp);
+        }
         if (mic && mic !== micFor && mic.getAudioTracks().length) {
-          try { if (micSrc) micSrc.disconnect(); micSrc = a.createMediaStreamSource(mic); micSrc.connect(recDest); micFor = mic; } catch (e) {}
+          try {
+            if (micSrc) micSrc.disconnect();
+            micSrc = a.createMediaStreamSource(mic);
+            micGain = a.createGain(); micGain.gain.value = 1.6;
+            micMeter = a.createAnalyser(); micMeter.fftSize = 512;
+            micSrc.connect(micGain); micGain.connect(recComp); micSrc.connect(micMeter);
+            micFor = mic;
+          } catch (e) {}
         }
         return recDest.stream.getAudioTracks()[0] || null;
+      },
+      // loudness of the mic as heard inside the mix: exactly 0 means the phone isn't passing her voice through
+      micLevel() {
+        if (!micMeter) return -1;
+        const d = new Float32Array(micMeter.fftSize); micMeter.getFloatTimeDomainData(d);
+        let s = 0; for (const x of d) s += x * x;
+        return Math.sqrt(s / d.length);
       },
       set(v) { on = v; try { localStorage.setItem('xiaohe-sound', v ? 'on' : 'off'); } catch (e) {} if (master) master.gain.value = v ? .9 : 0; if (!v) S.bgmStop(); },
       isOn: () => on
@@ -1380,12 +1406,14 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('finaleOv').hidden = false;
     $('finCoin').focus();
     burst(180, true); SFX.love(); heartRain(5000);
+    startEndingRec();
     say('全部刮完了！老闆有話跟你說');
   }
   $('finKeep').addEventListener('click', () => {
     if (!state.coin) { const net = state.won - state.spent; state.coin = { base: net, amount: net, flips: [], done: true, paying: false }; }
     save(); render();
     $('finaleOv').hidden = true; burst(90, true); SFX.love(); heartRain(3000);
+    endingStop();
     say('收下了！我愛你');
   });
   $('finCoin').addEventListener('click', () => {
@@ -1412,6 +1440,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     setCoin(last && !last.heads ? 180 : 0, false);
     renderCoin();
     $('coinOv').hidden = false;
+    if (!state.coin.done) startEndingRec();
   }
   function renderCoin() {
     const c = state.coin, last = c.flips[c.flips.length - 1];
@@ -1442,6 +1471,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('coinMsg').textContent = msg;
     $('coinBtns').innerHTML = btns;
     $('coinLater').hidden = c.done;
+    if (c.done) endingStop();
   }
   function flip() {
     const c = state.coin;
@@ -1460,7 +1490,9 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('coinBtns').innerHTML = ''; $('coinLater').hidden = true;
     $('coinMsg').textContent = '硬幣飛起來了……';
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coinFrom = coinRot;
     setCoin(Math.ceil((coinRot + 1800) / 360) * 360 + (heads ? 0 : 180), !reduce);
+    coinAnim = { from: coinFrom, to: coinRot, t0: performance.now(), dur: reduce ? 1 : 1600 };
     SFX.flipStart();
     if (fee) floatText(`−NT$${fmt(fee)}`, $('coinAmt'), 'minus');
     setTimeout(() => {
@@ -1485,7 +1517,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     else if (act === 'keep') { c.done = true; save(); render(); renderCoin(); burst(90, true); SFX.love(); heartRain(3000); }
     else if (act === 'close') $('coinOv').hidden = true;
   });
-  $('coinLater').addEventListener('click', () => { if (!flipping) $('coinOv').hidden = true; });
+  $('coinLater').addEventListener('click', () => { if (!flipping) { $('coinOv').hidden = true; endingStop(3); } });
   function showResult(k, fresh) {
     $('revealAll').hidden = true;
     $('nextTk').hidden = !nextFresh();
@@ -1630,6 +1662,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   const urls = [];
   // recording is required: there is no switch to turn the camera off
   const CAM = { stream: null, enabled: true, active: null, fit: 'wide' };
+  let useRawMic = false;
   try { CAM.fit = localStorage.getItem('xiaohe-fit') === 'fill' ? 'fill' : 'wide'; } catch (e) {}
   $('camBtn').hidden = true;
 
@@ -1798,7 +1831,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       let out, burned = true;
       if (cnv.captureStream) {
         out = cnv.captureStream(30);
-        const track = SFX.recTrack(CAM.stream);
+        const track = useRawMic ? null : SFX.recTrack(CAM.stream);   // raw mic = voice guaranteed, game sounds left out
         if (track) out.addTrack(track); else CAM.stream.getAudioTracks().forEach(t => out.addTrack(t));
       } else { out = CAM.stream; burned = false; }
       let rec;
@@ -1812,7 +1845,18 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       const elapsed = () => Math.floor((performance.now() - t0) / 1000);
       let rafId = 0, tickId = 0, timer = 0, stopped = false;
       const draw = () => {
-        drawFit(g, videoEl, W, H, true);   // mirrored, like a selfie
+        if (box.panel) {
+          // split screen: what's on the game screen on top, her face below
+          const PH = Math.round(H * .5), now = performance.now();
+          if (!box.pc) { box.pc = document.createElement('canvas'); box.pc.width = W; box.pc.height = PH; box.pg = box.pc.getContext('2d'); box.pt = 0; }
+          if (now - box.pt > 66) {   // the panel is redrawn ~15x a second, the camera every frame
+            box.pt = now;
+            box.pg.fillStyle = '#16100c'; box.pg.fillRect(0, 0, W, PH);
+            try { box.panel(box.pg, 0, 0, W, PH); } catch (e) {}
+          }
+          g.drawImage(box.pc, 0, 0);
+          drawCoverRect(g, videoEl, 0, PH, W, H - PH, true);
+        } else drawFit(g, videoEl, W, H, true);   // mirrored, like a selfie
         drawBanner(g, W, H, box.cap);
         rafId = requestAnimationFrame(draw);
       };
@@ -1833,6 +1877,8 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       };
       if (burned) draw();
       rec.start(500);
+      // if the mix carries no voice at all, the next recordings switch to the raw mic
+      if (!useRawMic && CAM.stream.getAudioTracks().length) setTimeout(() => { if (!stopped && SFX.micLevel() === 0) useRawMic = true; }, 2500);
       onTick && onTick(seconds, 0);
       tickId = setInterval(() => onTick && onTick(left(), elapsed()), 250);
       timer = setTimeout(stop, seconds * 1000);
@@ -1867,12 +1913,15 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('pipCap').textContent = scratching ? '刮刮中…' : resultCap(k);
     $('pip').hidden = false; pv.play().catch(() => {});
     await waitMeta(pv);
-    const box = scratching ? { cap: { big: '刮刮中…', small: `${t.price} 元 ${t.name} · ${GAMES[t.game].name}` } } : null;
-    const p = recordLive(ticketMeta(k), box ? 90 : 8, pv, (sec, el) => {   // scratching everything can take a while
-      if (gen === pipGen) $('pipCount').textContent = box && !k.revealed ? `${el}s` : sec;
+    const box = {
+      cap: scratching ? { big: '刮刮中…', small: `${t.price} 元 ${t.name} · ${GAMES[t.game].name}` } : caption({ ...ticketMeta(k), at: Date.now() }),
+      panel: drawTicketPanel   // the ticket itself, live, above her face
+    };
+    const p = recordLive(ticketMeta(k), scratching ? 90 : 8, pv, (sec, el) => {   // scratching everything can take a while
+      if (gen === pipGen) $('pipCount').textContent = scratching && !k.revealed ? `${el}s` : sec;
     }, box);
     recPendingFor = null;
-    if (box && k.revealed) applyReveal(k);   // revealed while the camera was still warming up
+    if (scratching && k.revealed) applyReveal(k);   // revealed while the camera was still warming up
     const clip = await p;
     if (gen === pipGen) $('pip').hidden = true;
     afterClip(k, clip);
@@ -2028,6 +2077,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   function caption(c) {
     if (c.kind === 'pick') return { big: `挑彩券台詞 ${c.n}`, small: `小鶴彩券行 · 開始挑彩券 · ${stamp(c.at)}` };
     if (c.kind === 'enter') return { big: '走進小鶴彩券行', small: `帶 NT$${fmt(c.brought || 0)} 進場 · ${stamp(c.at)}` };
+    if (c.kind === 'ending') return { big: c.final != null ? `最後拿到 NT$${fmt(c.final)}` : '最後結算', small: `淨賺 NT$${fmt(c.net || 0)} · 我愛你 · ${stamp(c.at)}` };
     return c.kind === 'intro'
       ? { big: '開場感言', small: `帶 NT$${fmt(c.brought || 0)} 進場 · ${stamp(c.at)}` }
       : { big: c.prize > 0 ? `中了 NT$${fmt(c.prize)}` : '銘謝惠顧', small: `${c.price} 元 ${c.name} · ${c.game} · ${stamp(c.at)}` };
@@ -2065,7 +2115,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
 
   // --- saving to the phone ---
   const extOf = (b) => /mp4/.test(b.type) ? 'mp4' : /webm/.test(b.type) ? 'webm' : /quicktime/.test(b.type) ? 'mov' : 'mp4';
-  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言' : c.kind === 'enter' ? `小鶴彩券行_進場_${c.at}` : c.kind === 'pick' ? `小鶴彩券行_挑彩券台詞${c.n}`
+  const fileName = (c) => (c.kind === 'intro' ? '小鶴彩券行_開場感言' : c.kind === 'enter' ? `小鶴彩券行_進場_${c.at}` : c.kind === 'ending' ? `小鶴彩券行_最後結算_${c.at}` : c.kind === 'pick' ? `小鶴彩券行_挑彩券台詞${c.n}`
     : `小鶴彩券行_${c.prize > 0 ? `中獎NT${c.prize}` : '銘謝惠顧'}_${c.serial.replace(/[^0-9A-Za-z-]/g, '')}`) + '.' + extOf(c.blob);
   function downloadFiles(files) {
     files.forEach((f, i) => setTimeout(() => {
@@ -2353,6 +2403,140 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     if (!k || k.revealed || (recArm && recArm.id === k.id)) return;
     if (recArm) clearTimeout(recArm.t);
     recArm = { id: k.id, t: setTimeout(() => { if (cur && cur.id === k.id && !k.revealed) ticketRecStart(k); }, 2000) };
+  }
+
+  // ---- drawing the game screen for the top half of a recording ----
+  function drawCoverRect(g, v, x, y, w, h, mirror) {
+    const vw = v.videoWidth || w, vh = v.videoHeight || h, k = Math.max(w / vw, h / vh), dw = vw * k, dh = vh * k;
+    g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+    if (mirror) { g.translate(2 * x + w, 0); g.scale(-1, 1); }
+    g.drawImage(v, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    g.restore();
+  }
+  const rootTok = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const isPaint = (c) => c && c !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(c);
+  function wrapText(g, text, x, y, maxW, lineH, maxLines) {
+    const lines = []; let line = '';
+    for (const ch of [...text]) { if (line && g.measureText(line + ch).width > maxW) { lines.push(line); line = ch; } else line += ch; }
+    if (line) lines.push(line);
+    lines.slice(0, maxLines || 9).forEach((l, i) => g.fillText(l, x, y + i * lineH));
+    return Math.min(lines.length, maxLines || 9);
+  }
+  // a live mirror of the ticket on screen: cells, what's still covered in silver, and the stamp after 兌獎
+  function drawTicketPanel(g, X, Y, W, H) {
+    if ($('scratchOv').hidden) return;
+    const tk = $('ticket'), game = $('game'), tcs = getComputedStyle(tk), tok = (n) => tcs.getPropertyValue(n).trim();
+    g.fillStyle = tok('--tk-soft') || '#fff8e6'; g.fillRect(X, Y, W, H);
+    const hh = Math.round(H * .13);
+    g.fillStyle = tok('--tk') || '#d7262e'; g.fillRect(X, Y, W, hh);
+    g.fillStyle = '#fff8e6'; g.textBaseline = 'middle';
+    g.textAlign = 'left'; g.font = `${Math.round(hh * .42)}px ${rootTok('--body')}`; g.fillText($('tName').textContent, X + 212, Y + hh / 2);
+    g.textAlign = 'right'; g.font = `${Math.round(hh * .5)}px ${rootTok('--num')}`; g.fillText($('tPrice').textContent.replace(/元$/, '') + ' 元', X + W - 16, Y + hh / 2);
+    const gr = game.getBoundingClientRect(); if (!gr.width || !gr.height) return;
+    const resH = Math.round(H * .12), availW = W - 24, availH = H - hh - resH - 12;
+    const k = Math.min(availW / gr.width, availH / gr.height);
+    const ox = X + (W - gr.width * k) / 2, oy = Y + hh + 6 + (availH - gr.height * k) / 2;
+    const map = (r) => [ox + (r.left - gr.left) * k, oy + (r.top - gr.top) * k, r.width * k, r.height * k];
+    for (const el of game.querySelectorAll('.sz, .cell, .beat-row .sz > span, .prizebox')) {
+      const bg = getComputedStyle(el).backgroundColor;
+      if (isPaint(bg)) { const [x, y, w, h] = map(el.getBoundingClientRect()); g.fillStyle = bg; g.fillRect(x, y, w, h); }
+    }
+    for (const el of game.querySelectorAll('.sym')) {
+      const [x, y, w, h] = map(el.getBoundingClientRect()), r = Math.min(w, h) / 2;
+      g.fillStyle = getComputedStyle(el).backgroundColor; g.beginPath(); g.arc(x + w / 2, y + h / 2, r, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff8e6'; g.textAlign = 'center'; g.font = `900 ${Math.round(r * 1.1)}px ${rootTok('--sign-font')}`;
+      g.fillText(el.getAttribute('aria-label') || el.textContent.trim(), x + w / 2, y + h / 2 + 1);
+    }
+    for (const el of game.querySelectorAll('.n, .u, .a, .lab span, .beat-head span, .lbl, .beat-row .sz > span')) {
+      if (el.querySelector('.sym')) continue;
+      const t = el.textContent.trim(); if (!t) continue;
+      const [x, y, w, h] = map(el.getBoundingClientRect()), cs = getComputedStyle(el);
+      g.fillStyle = cs.color; g.textAlign = 'center';
+      g.font = `${cs.fontWeight} ${Math.max(9, parseFloat(cs.fontSize) * k)}px ${cs.fontFamily}`;
+      g.fillText(t, x + w / 2, y + h / 2 + 1);
+    }
+    for (const c of game.querySelectorAll('canvas')) {   // the silver that's still there
+      if (c.classList.contains('gone') || !c.width) continue;
+      const [x, y, w, h] = map(c.getBoundingClientRect()); g.drawImage(c, x, y, w, h);
+    }
+    const st = $('stamp');
+    if (!st.hidden) {
+      g.save(); g.translate(X + W - 90, Y + hh + 60); g.rotate(-14 * Math.PI / 180);
+      g.strokeStyle = g.fillStyle = getComputedStyle(st).color; g.lineWidth = 6;
+      g.beginPath(); g.arc(0, 0, 54, 0, Math.PI * 2); g.stroke();
+      g.textAlign = 'center'; g.font = `900 ${st.textContent.length > 2 ? 22 : 34}px ${rootTok('--sign-font')}`; g.fillText(st.textContent, 0, 2);
+      g.restore();
+    }
+    g.fillStyle = tok('--tk-ink') || '#1d1512'; g.textAlign = 'center';
+    const rt = $('result').innerText.replace(/\s+/g, ' ').trim();
+    let fs = Math.round(resH * .4);
+    do { g.font = `${fs}px ${rootTok('--body')}`; } while (g.measureText(rt).width > W - 24 && --fs > 11);
+    g.fillText(rt, X + W / 2, Y + H - resH / 2);
+  }
+  // the ending: the 5200 card, then the coin game with the coin actually flipping
+  let coinAnim = null, endingRec = false;
+  function coinAngle() {
+    if (coinAnim) {
+      const p = Math.min(1, (performance.now() - coinAnim.t0) / coinAnim.dur);
+      if (p < 1) return coinAnim.from + (coinAnim.to - coinAnim.from) * (1 - Math.pow(1 - p, 3));
+    }
+    return coinRot;
+  }
+  function drawEndingPanel(g, X, Y, W, H) {
+    const coinOpen = !$('coinOv').hidden, cx = X + W / 2;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (!coinOpen) {
+      g.fillStyle = rootTok('--red'); g.fillRect(X, Y, W, H);
+      g.fillStyle = rootTok('--yellow'); g.font = `22px ${rootTok('--body')}`; g.fillText($('finK').textContent, cx, Y + 80);
+      g.font = `52px ${rootTok('--num')}`; g.fillText($('finTitle').textContent, cx, Y + 140);
+      g.fillStyle = rootTok('--paper');
+      if (!$('fin520').hidden) { g.font = `900 30px ${rootTok('--sign-font')}`; g.fillText($('fin520').textContent, cx, Y + 200); }
+      g.font = `28px ${rootTok('--body')}`; wrapText(g, $('finMsg').textContent, cx, Y + 262, W - 60, 40, 3);
+      g.font = `17px ${rootTok('--body')}`; g.fillText($('finStats').textContent, cx, Y + H - 40);
+      return;
+    }
+    g.fillStyle = rootTok('--wall'); g.fillRect(X, Y, W, H);
+    g.fillStyle = rootTok('--hot'); g.font = `22px ${rootTok('--body')}`; g.fillText('殘酷遊戲 · 丟硬幣', cx, Y + 70);
+    g.fillStyle = rootTok('--yellow'); g.font = `46px ${rootTok('--num')}`; g.fillText($('coinAmt').textContent, cx, Y + 120);
+    const ang = coinAngle() * Math.PI / 180, cosv = Math.cos(ang), R = 72, cy = Y + 245;
+    g.save(); g.translate(cx, cy); g.scale(Math.max(.05, Math.abs(cosv)), 1);
+    const grad = g.createRadialGradient(-R * .3, -R * .35, 4, 0, 0, R);
+    grad.addColorStop(0, '#fff2b8'); grad.addColorStop(.5, '#e8c35a'); grad.addColorStop(1, '#a07a1c');
+    g.fillStyle = grad; g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fill();
+    if (cosv >= 0) {   // heads: the crane on red
+      g.fillStyle = rootTok('--red'); g.beginPath(); g.arc(0, 0, R * .66, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff8e6'; g.font = `900 52px ${rootTok('--sign-font')}`; g.fillText('鶴', 0, 3);
+    } else { g.fillStyle = rootTok('--red-deep'); g.font = `900 64px ${rootTok('--sign-font')}`; g.fillText('愛', 0, 4); }
+    g.restore();
+    g.fillStyle = rootTok('--paper'); g.font = `22px ${rootTok('--body')}`;
+    wrapText(g, $('coinMsg').textContent, cx, Y + 355, W - 50, 32, 3);
+  }
+  async function startEndingRec() {
+    if (endingRec || !CAM.enabled) return;
+    if (CAM.active && CAM.active.meta && CAM.active.meta.kind === 'ending') return;
+    endingRec = true;
+    if (!(await camStart())) { endingRec = false; return; }
+    const gen = ++pipGen, pv = $('pipVideo'), net = state.won - state.spent;
+    document.body.classList.add('pipmini');
+    $('pipCap').textContent = '最後結算'; $('pip').hidden = false; pv.play().catch(() => {});
+    await waitMeta(pv);
+    const meta = { kind: 'ending', net };
+    const p = recordLive(meta, 300, pv, (sec, el) => { if (gen === pipGen) $('pipCount').textContent = `${el}s`; },
+      { cap: { big: '最後結算', small: `淨賺 NT$${fmt(net)} · 小鶴彩券行` }, panel: drawEndingPanel });
+    if (endingStopReq != null) { const sec = endingStopReq; endingStopReq = null; endingStop(sec); }   // decided while the camera was starting
+    const clip = await p;
+    endingRec = false;
+    document.body.classList.remove('pipmini');
+    if (gen === pipGen) $('pip').hidden = true;
+    if (clip) toast('最後的畫面也錄好了！');
+  }
+  let endingStopReq = null;
+  function endingStop(sec = 6) {   // keep 6 s of her reaction after the ending is decided
+    const act = CAM.active;
+    if (!act || !act.meta || act.meta.kind !== 'ending') { if (endingRec) endingStopReq = sec; return; }
+    const c = state.coin;
+    if (c && c.done) { act.meta.final = c.amount; act.box.cap = { big: `最後拿到 NT$${fmt(c.amount)}`, small: '小鶴彩券行 · 我愛你' }; }
+    act.stopIn(sec);
   }
 
   // ---------- boot ----------
