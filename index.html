@@ -405,6 +405,9 @@ img{max-width:100%}
 .intro-stage{position:relative;width:100%;max-width:200px;align-self:center;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000;border:3px solid var(--yellow)}
 .intro-stage .rec-badge{font-size:16px;top:10px;left:10px}
 .snd.cam{right:auto;left:12px}
+.snd.fit{right:auto;left:96px}
+.pip.wide video,.intro-stage.wide video{object-fit:contain}
+html,body{overscroll-behavior:none}
 .script{background:#fff6dc;border:2px dashed var(--yellow-deep);border-radius:12px;padding:10px 12px;font-size:18px;line-height:1.6;color:var(--ink);text-wrap:balance}
 .script span{display:block;font-size:12px;color:var(--muted-ink);letter-spacing:.1em}
 .cue{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:63;width:min(420px,calc(100% - 32px));
@@ -641,6 +644,7 @@ img{max-width:100%}
       <video id="introVideo" playsinline muted autoplay></video>
       <span class="rec-badge" id="introRec" hidden><i></i><span id="introCount">15</span></span>
     </div>
+    <button class="linkish" id="fitIntro" type="button" style="align-self:center;color:var(--muted-ink)">畫面 廣角</button>
     <div class="script" id="introScript"></div>
     <div class="rec-hint" id="camHint">按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每刮開一張，不管有沒有中，鏡頭都會自動錄 10 秒反應。</div>
     <div class="row">
@@ -712,6 +716,7 @@ img{max-width:100%}
   </div>
 </div>
 <button class="snd cam" id="camBtn" type="button" aria-pressed="true">鏡頭 開</button>
+<button class="snd fit" id="fitBtn" type="button">畫面 廣角</button>
 <button class="snd" id="sndBtn" type="button" aria-pressed="true">聲音 開</button>
 <canvas id="fx" aria-hidden="true"></canvas>
 
@@ -757,7 +762,7 @@ img{max-width:100%}
       } catch (e) { return null; }
     }
     function tone(f, at, dur, o = {}) {
-      const a = on && ctx(); if (!a) return;
+      const a = on && !document.hidden && ctx(); if (!a) return;
       const t = a.currentTime + Math.max(0, at), osc = a.createOscillator(), g = a.createGain();
       osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(f, t);
       if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t + dur);
@@ -769,7 +774,7 @@ img{max-width:100%}
       return noiseBuf;
     }
     function noise(at, dur, o = {}) {
-      const a = on && ctx(); if (!a) return;
+      const a = on && !document.hidden && ctx(); if (!a) return;
       const t = a.currentTime + Math.max(0, at), src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
       src.buffer = nbuf(a); src.loop = true;
       f.type = o.filter || 'bandpass'; f.frequency.setValueAtTime(o.freq || 1500, t); if (o.slide) f.frequency.exponentialRampToValueAtTime(o.slide, t + dur); f.Q.value = o.q || 1;
@@ -788,7 +793,7 @@ img{max-width:100%}
       register() { noise(0, .12, { vol: .2, freq: 900, q: 1.5 }); tone(N(96), .1, .7, { type: 'triangle', vol: .16 }); tone(N(103), .14, .8, { type: 'triangle', vol: .1 }); S.coins(.2, 6); },
       coinDrop() { [0, .1, .17, .22, .26].forEach((t, i) => tone(N(94 - i), t, .25, { type: 'triangle', vol: .1 })); },
       scratch() {
-        const a = on && ctx(); if (!a) return;
+        const a = on && !document.hidden && ctx(); if (!a) return;
         if (!scratchGain) {
           const src = a.createBufferSource(), f = a.createBiquadFilter();
           src.buffer = nbuf(a); src.loop = true; f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = .8;
@@ -816,7 +821,7 @@ img{max-width:100%}
       flipLand() { tone(N(88), 0, .35, { type: 'triangle', vol: .18 }); tone(N(95), .06, .45, { type: 'triangle', vol: .1 }); noise(0, .05, { vol: .2, freq: 3000 }); },
       love() { [72, 76, 79, 84, 83, 79, 81, 79, 76, 77, 76, 74, 72].forEach((m, i) => { tone(N(m), i * .3, 1.2, { vol: .12 }); tone(N(m + 12), i * .3, .5, { type: 'triangle', vol: .03 }); }); },
       bgmStart() {
-        const a = on && ctx(); if (!a || bgmTimer) return;
+        const a = on && !document.hidden && ctx(); if (!a || bgmTimer) return;
         const PROG = [[48, 60, 64, 67], [45, 57, 60, 64], [41, 57, 60, 65], [43, 55, 59, 62]], PENTA = [72, 74, 76, 79, 81, 84];
         bgmNext = a.currentTime + .1; bgmStep = 0;
         bgmTimer = setInterval(() => {
@@ -832,6 +837,8 @@ img{max-width:100%}
         }, 150);
       },
       bgmStop() { clearInterval(bgmTimer); bgmTimer = 0; },
+      pause() { try { if (ac && ac.state === 'running') ac.suspend(); } catch (e) {} },
+      resume() { try { if (ac && on && ac.state === 'suspended') ac.resume(); } catch (e) {} },
       recTrack(mic) {
         const a = ctx(); if (!a) return null;
         if (!recDest) { recDest = a.createMediaStreamDestination(); master.connect(recDest); }
@@ -1242,6 +1249,7 @@ img{max-width:100%}
     const pos = (e) => { const r = f.c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     f.c.addEventListener('pointerdown', (e) => {
       if (!cur || cur.revealed || f.done) return;
+      ticketRecStart(cur);
       f.drawing = true; f.last = pos(e); f.c.setPointerCapture(e.pointerId); scratch(f, f.last);
     });
     f.c.addEventListener('pointermove', (e) => { if (f.drawing) scratch(f, pos(e)); });
@@ -1548,8 +1556,8 @@ img{max-width:100%}
   const camInput = $('camInput'), memClips = new Map();
   let clips = [], camPending = null, toastTimer = 0, saving = false, pipGen = 0, introBusy = false;
   const urls = [];
-  const CAM = { stream: null, enabled: true, active: null };
-  try { CAM.enabled = localStorage.getItem('xiaohe-cam') !== 'off'; } catch (e) {}
+  const CAM = { stream: null, enabled: true, active: null, fit: 'wide' };
+  try { CAM.enabled = localStorage.getItem('xiaohe-cam') !== 'off'; CAM.fit = localStorage.getItem('xiaohe-fit') === 'fill' ? 'fill' : 'wide'; } catch (e) {}
 
   function toast(text, sticky) {
     clearTimeout(toastTimer);
@@ -1590,17 +1598,70 @@ img{max-width:100%}
   async function camStart() {
     if (live()) return true;
     if (!CAM.enabled || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+    // 4:3 asks for the whole sensor instead of a 16:9 crop of it: the widest view the selfie camera has
+    const video = { facingMode: 'user', width: { ideal: 1440 }, height: { ideal: 1080 } };
     try {
-      CAM.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } }, audio: { echoCancellation: true, noiseSuppression: true } });
+      CAM.stream = await navigator.mediaDevices.getUserMedia({ video, audio: { echoCancellation: true, noiseSuppression: true } });
     } catch (e) {
-      try { CAM.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }); }
-      catch (e2) { CAM.stream = null; return false; }
+      try { CAM.stream = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
+      catch (e2) {
+        try { CAM.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }); }
+        catch (e3) { CAM.stream = null; return false; }
+      }
     }
+    await widest();
     for (const id of ['pipVideo', 'introVideo']) { const v = $(id); v.srcObject = CAM.stream; v.muted = true; v.play().catch(() => {}); }
     // ask the browser not to clear stored clips when the phone runs low on space
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     return true;
   }
+  async function widest() {
+    // a phone with its own ultra-wide selfie lens: switch to that lens (labels are readable once permission is given)
+    try {
+      const vt = CAM.stream.getVideoTracks()[0], curId = vt.getSettings().deviceId;
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const uw = devs.find(d => d.kind === 'videoinput' && d.deviceId !== curId && /front|user|前|facetime/i.test(d.label) && /ultra|wide|廣角/i.test(d.label));
+      if (uw) {
+        const s2 = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: uw.deviceId }, width: { ideal: 1440 }, height: { ideal: 1080 } }, audio: false });
+        const audio = CAM.stream.getAudioTracks();
+        CAM.stream.getVideoTracks().forEach(t => t.stop());
+        CAM.stream = new MediaStream([...s2.getVideoTracks(), ...audio]);
+      }
+    } catch (e) {}
+    // zoom all the way out where the browser exposes the camera's zoom
+    try {
+      const vt = CAM.stream.getVideoTracks()[0], cap = vt.getCapabilities ? vt.getCapabilities() : {};
+      if (cap.zoom && cap.zoom.min < (vt.getSettings().zoom || 1)) await vt.applyConstraints({ advanced: [{ zoom: cap.zoom.min }] });
+    } catch (e) {}
+  }
+  // 廣角: the whole camera picture, with a soft blurred copy filling the rest of the 9:16 frame. 滿版: crop to fill.
+  const blurCnv = document.createElement('canvas'); blurCnv.width = 27; blurCnv.height = 48;
+  const blurG = blurCnv.getContext('2d');
+  function drawFit(g, v, W, H, mirror) {
+    if (CAM.fit !== 'wide') return drawCover(g, v, W, H, mirror);
+    const vw = v.videoWidth || W, vh = v.videoHeight || H;
+    drawCover(blurG, v, 27, 48, mirror);   // a few pixels, stretched back up = cheap blur on any phone
+    g.imageSmoothingEnabled = true; g.drawImage(blurCnv, 0, 0, W, H);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, 0, W, H);
+    const k = Math.min(W / vw, H / vh), dw = vw * k, dh = vh * k;
+    g.save();
+    if (mirror) { g.translate(W, 0); g.scale(-1, 1); }
+    g.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    g.restore();
+  }
+  function syncFit() {
+    const wide = CAM.fit === 'wide', label = wide ? '畫面 廣角' : '畫面 滿版';
+    $('fitBtn').textContent = label; $('fitIntro').textContent = `${label}（點一下切換）`;
+    $('pip').classList.toggle('wide', wide); $('introStage').classList.toggle('wide', wide);
+  }
+  function toggleFit() {
+    CAM.fit = CAM.fit === 'wide' ? 'fill' : 'wide';
+    try { localStorage.setItem('xiaohe-fit', CAM.fit); } catch (e) {}
+    syncFit();
+    toast(CAM.fit === 'wide' ? '廣角：完整畫面都錄進去' : '滿版：放大裁切填滿畫面');
+  }
+  $('fitBtn').addEventListener('click', toggleFit);
+  $('fitIntro').addEventListener('click', toggleFit);
   function camStop() {
     if (CAM.active) CAM.active.stop();
     if (CAM.stream) CAM.stream.getTracks().forEach(t => t.stop());
@@ -1615,14 +1676,32 @@ img{max-width:100%}
     else toast((await camStart()) ? '鏡頭開了，每刮開一張會自動錄 10 秒' : '手機沒有給鏡頭權限，刮開後可以按按鈕用相機錄');
   });
   syncCam();
-  document.addEventListener('visibilitychange', () => { if (document.hidden && !CAM.active) camStop(); });
+  syncFit();
+  // leaving the page (app switch, swipe back, lock screen) silences the shop; coming back turns it on again
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { SFX.pause(); if (!CAM.active) camStop(); } else SFX.resume();
+  });
+  addEventListener('pagehide', () => SFX.pause());
+  addEventListener('pageshow', (e) => { if (e.persisted) SFX.resume(); });
+  // an accidental back swipe stays in the game: it closes whatever is open instead of leaving
+  let guarded = false;
+  document.addEventListener('pointerdown', () => {
+    if (guarded) return; guarded = true;
+    try { history.pushState({ xiaohe: 1 }, ''); } catch (e) {}
+  }, { capture: true });
+  addEventListener('popstate', () => {
+    try { history.pushState({ xiaohe: 1 }, ''); } catch (e) {}
+    const open = ['vidOv', 'xferOv', 'bossOv', 'payOv', 'mineOv', 'scratchOv', 'bringOv', 'camOv'].some(id => $(id) && !$(id).hidden);
+    if (open) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    else toast('還在小鶴彩券行喔！要離開的話直接關掉分頁');
+  });
 
   const pickMime = () => window.MediaRecorder && MediaRecorder.isTypeSupported &&
     ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
   const waitMeta = (v) => v.videoWidth ? Promise.resolve() : new Promise(r => { v.addEventListener('loadedmetadata', r, { once: true }); setTimeout(r, 1500); });
 
   // Record `seconds` of the live camera shown in `videoEl`, with the caption burned in. Resolves with the saved clip (or null).
-  function recordLive(meta, seconds, videoEl, onTick) {
+  function recordLive(meta, seconds, videoEl, onTick, box) {
     if (CAM.active) CAM.active.stop();
     const mime = pickMime();
     if (!mime || !live()) return Promise.resolve(null);
@@ -1640,12 +1719,15 @@ img{max-width:100%}
       try { rec = new MediaRecorder(out, { mimeType: mime, videoBitsPerSecond: 1200000 }); } catch (e) { resolve(null); return; }
       const chunks = [];
       rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-      const at0 = Date.now(), t0 = performance.now(), cap = caption({ ...meta, at: at0 });
-      const left = () => Math.ceil(Math.max(0, seconds - (performance.now() - t0) / 1000));
+      const at0 = Date.now(), t0 = performance.now();
+      box = box || { cap: caption({ ...meta, at: at0 }) };   // the banner text can change mid-recording (刮刮中… -> result)
+      let deadline = t0 + seconds * 1000;
+      const left = () => Math.ceil(Math.max(0, (deadline - performance.now()) / 1000));
+      const elapsed = () => Math.floor((performance.now() - t0) / 1000);
       let rafId = 0, tickId = 0, timer = 0, stopped = false;
       const draw = () => {
-        drawCover(g, videoEl, W, H, true);   // mirrored, like a selfie
-        drawBanner(g, W, H, cap);
+        drawFit(g, videoEl, W, H, true);   // mirrored, like a selfie
+        drawBanner(g, W, H, box.cap);
         rafId = requestAnimationFrame(draw);
       };
       const stop = () => {
@@ -1663,31 +1745,64 @@ img{max-width:100%}
       };
       if (burned) draw();
       rec.start(500);
-      onTick && onTick(seconds);
-      tickId = setInterval(() => onTick && onTick(left()), 250);
+      onTick && onTick(seconds, 0);
+      tickId = setInterval(() => onTick && onTick(left(), elapsed()), 250);
       timer = setTimeout(stop, seconds * 1000);
-      CAM.active = { rec, stop };
+      CAM.active = { rec, stop, meta, box, at0,
+        stopIn(sec) { clearTimeout(timer); deadline = performance.now() + sec * 1000; timer = setTimeout(stop, sec * 1000); } };
     });
   }
 
-  // every ticket: 10 s reaction in the PiP bubble, without stopping the game
-  async function autoRecord(k) {
-    if (cueRunning) { cueAbort = true; state.pickLinesDone = true; save(); $('cue').hidden = true; }   // the ticket takes over the camera
-    if (!CAM.enabled || !(await camStart())) return;   // no camera: the result keeps its 錄 10 秒反應 button
+  // A ticket's clip starts the moment her finger touches the foil and runs until 6 s after the reveal.
+  // Until the reveal the banner only says 刮刮中…, so the result isn't given away on screen.
+  let recPendingFor = null;
+  const ticketMeta = (k) => { const t = typeOf(k.type); return { kind: 'win', ticketId: k.id, prize: k.prize, name: t.name, price: t.price, game: GAMES[t.game].name, serial: k.serial }; };
+  const resultCap = (k) => k.prize > 0 ? `中了 NT$${fmt(k.prize)}` : '銘謝惠顧';
+  function applyReveal(k) {
+    const act = CAM.active;
+    if (!act || !act.meta || act.meta.ticketId !== k.id) return false;
+    act.box.cap = caption({ ...act.meta, at: act.at0 });
+    $('pipCap').textContent = resultCap(k);
+    act.stopIn(6);
+    return true;
+  }
+  function afterClip(k, clip) {
+    if (!clip) return;
+    const pend = clips.filter(c => !c.saved && !c.sent).length;
+    if (pend && pend % 15 === 0) toast(`有 ${pend} 段影片還沒備份，有空打開「影片」存起來`);
+    else if (k.prize > 0) toast('反應錄好了，收在「影片」裡');
+    if (cur && cur.id === k.id && cur.revealed) showResult(cur, false);
+  }
+  async function runTicketClip(k, fromTouch) {
     const t = typeOf(k.type), gen = ++pipGen, pv = $('pipVideo');
-    $('pipCap').textContent = k.prize > 0 ? `中了 NT$${fmt(k.prize)}` : '銘謝惠顧';
-    $('pip').hidden = false;
-    pv.play().catch(() => {});
+    const scratching = fromTouch && !k.revealed;
+    $('pipCap').textContent = scratching ? '刮刮中…' : resultCap(k);
+    $('pip').hidden = false; pv.play().catch(() => {});
     await waitMeta(pv);
-    const clip = await recordLive({ kind: 'win', ticketId: k.id, prize: k.prize, name: t.name, price: t.price, game: GAMES[t.game].name, serial: k.serial },
-      10, pv, (sec) => { if (gen === pipGen) $('pipCount').textContent = sec; });
+    const box = scratching ? { cap: { big: '刮刮中…', small: `${t.price} 元 ${t.name} · ${GAMES[t.game].name}` } } : null;
+    const p = recordLive(ticketMeta(k), box ? 45 : 8, pv, (sec, el) => {
+      if (gen === pipGen) $('pipCount').textContent = box && !k.revealed ? `${el}s` : sec;
+    }, box);
+    recPendingFor = null;
+    if (box && k.revealed) applyReveal(k);   // revealed while the camera was still warming up
+    const clip = await p;
     if (gen === pipGen) $('pip').hidden = true;
-    if (clip) {
-      const pend = clips.filter(c => !c.saved && !c.sent).length;
-      if (pend && pend % 15 === 0) toast(`有 ${pend} 段影片還沒備份，有空打開「影片」存起來`);
-      else if (k.prize > 0) toast('反應錄好了，收在「影片」裡');
-      if (cur && cur.id === k.id) showResult(cur, false);
-    }
+    afterClip(k, clip);
+  }
+  async function ticketRecStart(k) {   // finger down on the foil
+    if (!CAM.enabled || !k || k.revealed || recPendingFor === k.id) return;
+    if (CAM.active && CAM.active.meta && CAM.active.meta.ticketId === k.id) return;
+    if (cueRunning) { cueAbort = true; state.pickLinesDone = true; save(); $('cue').hidden = true; }
+    recPendingFor = k.id;
+    if (!(await camStart())) { recPendingFor = null; return; }
+    runTicketClip(k, true);
+  }
+  async function autoRecord(k) {   // the reveal
+    if (cueRunning) { cueAbort = true; state.pickLinesDone = true; save(); $('cue').hidden = true; }   // the ticket takes over the camera
+    if (recPendingFor === k.id) return;   // still starting up: runTicketClip applies the reveal itself
+    if (applyReveal(k)) return;           // already rolling since she started scratching
+    if (!CAM.enabled || !(await camStart())) return;   // no camera: the result keeps its 錄 10 秒反應 button
+    runTicketClip(k, false);
   }
 
   // --- two short lines when she starts picking: recorded in the PiP bubble while she browses the table ---
