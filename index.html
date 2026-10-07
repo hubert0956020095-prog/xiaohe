@@ -405,9 +405,22 @@ img{max-width:100%}
 .intro-stage{position:relative;width:100%;max-width:200px;align-self:center;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000;border:3px solid var(--yellow)}
 .intro-stage .rec-badge{font-size:16px;top:10px;left:10px}
 .snd.cam{right:auto;left:12px}
-.snd.fit{right:auto;left:96px}
+.snd.fit{right:auto;left:12px}
+.savechip{position:fixed;left:12px;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:61;border:0;border-radius:99px;padding:9px 16px;
+  background:var(--yellow);color:var(--ink);font:inherit;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.45);animation:pipIn .35s cubic-bezier(.3,1.4,.5,1)}
+.wline{margin:0;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
 .pip.wide video,.intro-stage.wide video{object-fit:contain}
 html,body{overscroll-behavior:none}
+body.scratching{overflow:hidden}
+#scratchOv{overscroll-behavior:contain}
+/* while a ticket is open: a strip on top holds the selfie bubble and the save chip, so nothing covers the ticket */
+.pip{pointer-events:none}
+body.scratching #scratchOv{padding-top:calc(72px + env(safe-area-inset-top,0px))}
+body.scratching .pip{width:56px;aspect-ratio:1;border-radius:50%;left:12px;top:calc(8px + env(safe-area-inset-top,0px));border-width:3px}
+body.scratching .pip .pip-cap{display:none}
+body.scratching .pip .rec-badge{top:auto;bottom:2px;left:50%;transform:translateX(-50%);font-size:10px;padding:0 5px}
+body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0px));left:auto;right:12px;font-size:12px;padding:7px 12px}
+#scratchOv.locked{overflow:hidden;touch-action:none}
 .script{background:#fff6dc;border:2px dashed var(--yellow-deep);border-radius:12px;padding:10px 12px;font-size:18px;line-height:1.6;color:var(--ink);text-wrap:balance}
 .script span{display:block;font-size:12px;color:var(--muted-ink);letter-spacing:.1em}
 .cue{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:63;width:min(420px,calc(100% - 32px));
@@ -480,10 +493,13 @@ html,body{overscroll-behavior:none}
       </div>
     </header>
 
+    <section style="display:flex;flex-direction:column;gap:6px">
     <section class="wallet" aria-label="我的帳">
       <div><span class="k">錢包</span><span class="v" id="wBal">0</span><button class="addbtn" id="addMoney" type="button">＋ 再拿錢出來</button></div>
       <div><span class="k">帶進來</span><span class="v" id="wIn">0</span></div>
       <div class="pend" id="wNetBox"><span class="k">目前輸贏</span><span class="v" id="wNet">0</span></div>
+    </section>
+    <p class="wline" id="wLine"></p>
     </section>
 
     <section class="endcard" id="endCard" hidden>
@@ -717,6 +733,7 @@ html,body{overscroll-behavior:none}
 </div>
 <button class="snd cam" id="camBtn" type="button" aria-pressed="true">鏡頭 開</button>
 <button class="snd fit" id="fitBtn" type="button">畫面 廣角</button>
+<button class="savechip" id="saveChip" type="button" hidden>剛錄好的影片 · 存到相簿</button>
 <button class="snd" id="sndBtn" type="button" aria-pressed="true">聲音 開</button>
 <canvas id="fx" aria-hidden="true"></canvas>
 
@@ -989,8 +1006,10 @@ html,body{overscroll-behavior:none}
 
   // ---------- render ----------
   function render() {
-    // virtual money: wallet = brought + won - spent, so the net is also wallet - brought
+    // virtual money: the wallet is always exactly brought - spent + won (spent includes coin-game fees)
+    state.wallet = state.brought - state.spent + state.won;
     const net = state.won - state.spent;
+    $('wLine').textContent = `帶進來 ${fmt(state.brought)} − 花掉 ${fmt(state.spent)} + 中獎 ${fmt(state.won)} = 錢包 ${fmt(state.wallet)}`;
     countTo($('wBal'), state.wallet);
     $('wIn').textContent = fmt(state.brought);
     $('wNet').textContent = (net > 0 ? '+' : net < 0 ? '−' : '') + fmt(Math.abs(net));
@@ -1080,12 +1099,13 @@ html,body{overscroll-behavior:none}
 
   // ---------- bringing money in ----------
   let bringMode = 'enter', bringThen = null;
-  function openBring(mode, then) {
+  function openBring(mode, then, need) {
     bringMode = mode; bringThen = then || null;
     $('bringTitle').textContent = mode === 'enter' ? '今天帶多少錢來刮？' : '要再拿多少錢出來？';
-    $('bringSub').textContent = mode === 'enter' ? '店裡用的是虛擬錢。刮完以後，再跟老闆用現金算差額。' : '會加進錢包，最後一起跟老闆算。';
+    $('bringSub').textContent = mode === 'enter' ? '店裡用的是虛擬錢。刮完以後，再跟老闆用現金算差額。'
+      : need > 0 ? `錢包還差 NT$${fmt(need)}，補進來才能繼續。最後一起跟老闆算。` : '會加進錢包，最後一起跟老闆算。';
     $('bringOk').textContent = mode === 'enter' ? '帶著錢進去' : '放進錢包';
-    $('bringIn').value = mode === 'enter' ? 1000 : 500;
+    $('bringIn').value = mode === 'enter' ? 1000 : Math.max(100, Math.ceil((need || 500) / 100) * 100);
     $('bringErr').hidden = true;
     markChip();
     $('bringOv').hidden = false;
@@ -1111,6 +1131,7 @@ html,body{overscroll-behavior:none}
 
   // ---------- checkout ----------
   $('checkout').addEventListener('click', () => {
+    if (cueRunning || (!state.pickLinesDone && scene === 'inside')) { toast('先把兩段開場台詞錄完，才能結帳喔'); startPickLines(); return; }
     const picks = [...selected].map(byId).filter(k => k && !k.sold);
     if (!picks.length) return;
     const groups = state.config.map(t => ({ t, n: picks.filter(k => k.type === t.id).length })).filter(g => g.n);
@@ -1123,12 +1144,13 @@ html,body{overscroll-behavior:none}
     $('payAfter').classList.toggle('short', short > 0);
     $('payOk').textContent = short > 0 ? '再拿錢出來' : `從錢包付 NT$${fmt(sum)}`;
     $('payOk').dataset.mode = short > 0 ? 'add' : 'pay';
+    $('payOk').dataset.need = String(Math.max(0, short));
     $('payOv').hidden = false;
     $('payOk').focus();
   });
   $('payCancel').addEventListener('click', () => { $('payOv').hidden = true; });
   $('payOk').addEventListener('click', () => {
-    if ($('payOk').dataset.mode === 'add') { $('payOv').hidden = true; openBring('add', () => $('checkout').click()); return; }
+    if ($('payOk').dataset.mode === 'add') { $('payOv').hidden = true; openBring('add', () => $('checkout').click(), +$('payOk').dataset.need); return; }
     const picks = [...selected].map(byId).filter(k => k && !k.sold);
     const sum = picks.reduce((s2, k) => s2 + typeOf(k.type).price, 0);
     if (sum > state.wallet) return;
@@ -1205,6 +1227,7 @@ html,body{overscroll-behavior:none}
     tk.dataset.t = k.type;
     tk.classList.toggle('done', k.revealed);
     tk.classList.remove('mega', 'shake'); $('scratchOv').classList.remove('mega-bg'); $('stamp').hidden = true;
+    $('closeScratch').hidden = false;
     SFX.pick();
     $('tShop').textContent = `小鶴彩券行 · 玩法：${GAMES[t.game].name}`;
     $('tName').textContent = t.name;
@@ -1214,10 +1237,11 @@ html,body{overscroll-behavior:none}
     $('game').innerHTML = renderGame(k);
     foils = [...$('game').querySelectorAll('canvas')].map(c => ({ c, ctx: c.getContext('2d', { willReadFrequently: true }), done: false, drawing: false, last: null, strokes: 0 }));
     $('scratchOv').hidden = false;
+    lockScratch(!k.revealed);
     if (k.revealed) { foils.forEach(f => f.c.classList.add('gone')); showResult(k, false); return; }
     $('result').className = 'result';
-    $('result').innerHTML = '<span class="r1">拿銅板把銀色的地方都刮開</span>';
-    $('revealAll').hidden = false;
+    $('result').innerHTML = '<span class="r1">把銀色的地方全部刮乾淨，自己看有沒有中！</span>';
+    $('revealAll').hidden = true;
     $('nextTk').hidden = true;
     foils.forEach(bindFoil);
     requestAnimationFrame(() => foils.forEach(paintFoil));
@@ -1260,7 +1284,7 @@ html,body{overscroll-behavior:none}
   function scratch(f, p) {
     const x = f.ctx;
     x.globalCompositeOperation = 'destination-out';
-    x.lineWidth = 32; x.lineCap = 'round'; x.lineJoin = 'round';
+    x.lineWidth = 38; x.lineCap = 'round'; x.lineJoin = 'round';
     x.beginPath(); x.moveTo(f.last.x, f.last.y); x.lineTo(p.x + .01, p.y); x.stroke();
     f.last = p;
     SFX.scratch();
@@ -1272,8 +1296,8 @@ html,body{overscroll-behavior:none}
     const d = f.ctx.getImageData(0, 0, w, h).data;
     let clear = 0, n = 0;
     for (let y = 0; y < h; y += 8) for (let xx = 0; xx < w; xx += 8) { n++; if (d[(y * w + xx) * 4 + 3] < 40) clear++; }
-    if (clear / n > .55) {
-      f.done = true; f.drawing = false; f.c.classList.add('gone');
+    if (clear / n > .85) {   // a zone counts only when it's almost all scratched off; its foil stays until every zone is done
+      f.done = true; f.drawing = false;
       if (foils.every(o => o.done)) finish(); else SFX.reveal();
     }
   }
@@ -1285,6 +1309,7 @@ html,body{overscroll-behavior:none}
     if (cur.prize > 0) { state.won += cur.prize; state.wallet += cur.prize; }
     save(); render();
     $('ticket').classList.add('done');
+    lockScratch(false);
     showResult(cur, true);
     celebrate(cur);
     say(pickOne(cur.prize > 0 ? LINES.win : LINES.lose));
@@ -1327,7 +1352,7 @@ html,body{overscroll-behavior:none}
       $('finMsg').textContent = '沒關係，不是最大獎，但是我愛你';
     }
     $('finStats').textContent = `刮了 ${state.tickets.length} 張 · 帶進來 NT$${fmt(state.brought)} · 錢包剩 NT$${fmt(state.wallet)}`;
-    $('scratchOv').hidden = true; cur = null;
+    $('scratchOv').hidden = true; cur = null; unlockPage();
     $('finaleOv').hidden = false;
     $('finCoin').focus();
     burst(180, true); SFX.love(); heartRain(5000);
@@ -1431,7 +1456,7 @@ html,body{overscroll-behavior:none}
     const c = state.coin, act = b.dataset.c;
     if (act === 'flip') flip();
     else if (act === 'pay') { c.paying = true; renderCoin(); }
-    else if (act === 'add') openBring('add', renderCoin);
+    else if (act === 'add') openBring('add', renderCoin, FEE - state.wallet);
     else if (act === 'unpay') { c.paying = false; renderCoin(); }
     else if (act === 'keep') { c.done = true; save(); render(); renderCoin(); burst(90, true); SFX.love(); heartRain(3000); }
     else if (act === 'close') $('coinOv').hidden = true;
@@ -1440,23 +1465,46 @@ html,body{overscroll-behavior:none}
   function showResult(k, fresh) {
     $('revealAll').hidden = true;
     $('nextTk').hidden = !nextFresh();
+    const mustRec = !live() && !recPendingFor && !clips.some(c => c.ticketId === k.id);
+    $('closeScratch').hidden = mustRec;
+    if (mustRec) $('nextTk').hidden = true;
     const r = $('result');
     if (k.prize > 0) {
       r.className = 'result win';
       const has = clips.some(c => c.ticketId === k.id);
       r.innerHTML = `<span class="r1">中獎了！獎金已經放進錢包</span><span class="r2">NT$${fmt(k.prize)}</span>` +
-        (live() ? '' : `<button class="btn y rec-btn" type="button" data-rec>${has ? '再錄一次反應' : '錄 10 秒反應'}</button>`);
+        (live() ? '' : `<button class="btn y rec-btn" type="button" data-rec>${has ? '再錄一次反應' : '錄 10 秒反應（要錄完才能繼續）'}</button>`);
       stampFor(k, fresh);
     } else {
       r.className = 'result';
       r.innerHTML = '<span class="r1">銘謝惠顧</span><span class="r2" style="font-size:20px">下一張一定中</span>' +
-        (live() ? '' : `<button class="btn y rec-btn" type="button" data-rec>${clips.some(c => c.ticketId === k.id) ? '再錄一次反應' : '錄 10 秒反應'}</button>`);
+        (live() ? '' : `<button class="btn y rec-btn" type="button" data-rec>${clips.some(c => c.ticketId === k.id) ? '再錄一次反應' : '錄 10 秒反應（要錄完才能繼續）'}</button>`);
       stampFor(k, fresh);
     }
   }
   $('revealAll').addEventListener('click', finish);
   $('nextTk').addEventListener('click', () => { const n = nextFresh(); if (n) openTicket(n.id); });
-  $('closeScratch').addEventListener('click', () => { $('scratchOv').hidden = true; cur = null; });
+  $('closeScratch').addEventListener('click', () => { $('scratchOv').hidden = true; cur = null; unlockPage(); });
+  function fitTicket() {
+    const tk = $('ticket');
+    tk.style.transform = ''; tk.style.marginBottom = '';
+    const cs = getComputedStyle($('scratchOv'));
+    const h = tk.offsetHeight, avail = innerHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 4;
+    if (h > avail) {   // short phone: scale the whole ticket down instead of letting it scroll
+      tk.style.transformOrigin = 'top center';
+      tk.style.transform = `scale(${avail / h})`;
+      tk.style.marginBottom = `${avail - h}px`;
+    }
+  }
+  function lockScratch(on) {
+    document.body.classList.add('scratching');
+    $('scratchOv').classList.toggle('locked', on);
+    if (on) fitTicket();
+  }
+  function unlockPage() { document.body.classList.remove('scratching'); $('scratchOv').classList.remove('locked'); $('ticket').style.transform = ''; $('ticket').style.marginBottom = ''; }
+  // iPhone ignores touch-action on its own for the page bounce: stop the drag outright while a ticket is being scratched
+  $('scratchOv').addEventListener('touchmove', (e) => { if ($('scratchOv').classList.contains('locked')) e.preventDefault(); }, { passive: false });
+  addEventListener('resize', () => { if (!$('scratchOv').hidden && $('scratchOv').classList.contains('locked')) fitTicket(); });
 
   // ---------- owner's back office ----------
   let draft, draftBonus, armed = false;
@@ -1545,7 +1593,7 @@ html,body{overscroll-behavior:none}
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     for (const [ov, btn] of [['vidOv', 'vidClose'], ['camOv', 'camSkip'], ['bringOv', 'bringCancel'], ['bossOv', 'bossClose'], ['payOv', 'payCancel'], ['mineOv', 'mineClose'], ['scratchOv', 'closeScratch']])
-      if (!$(ov).hidden) { $(btn).click(); return; }
+      if (!$(ov).hidden) { if (!$(btn).hidden) $(btn).click(); return; }
   });
 
   // ---------- camera ----------
@@ -1556,8 +1604,10 @@ html,body{overscroll-behavior:none}
   const camInput = $('camInput'), memClips = new Map();
   let clips = [], camPending = null, toastTimer = 0, saving = false, pipGen = 0, introBusy = false;
   const urls = [];
+  // recording is required: there is no switch to turn the camera off
   const CAM = { stream: null, enabled: true, active: null, fit: 'wide' };
-  try { CAM.enabled = localStorage.getItem('xiaohe-cam') !== 'off'; CAM.fit = localStorage.getItem('xiaohe-fit') === 'fill' ? 'fill' : 'wide'; } catch (e) {}
+  try { CAM.fit = localStorage.getItem('xiaohe-fit') === 'fill' ? 'fill' : 'wide'; } catch (e) {}
+  $('camBtn').hidden = true;
 
   function toast(text, sticky) {
     clearTimeout(toastTimer);
@@ -1580,7 +1630,17 @@ html,body{overscroll-behavior:none}
       tx.oncomplete = () => res(req && req.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
     });
   }
-  async function putClip(c) { try { await idbDo('readwrite', st => st.put(c)); } catch (e) { memClips.set(c.id, c); } }
+  async function putClip(c) {   // true = safely on the phone; false = only held in memory (storage full or blocked)
+    try { await idbDo('readwrite', st => st.put(c)); return true; } catch (e) { memClips.set(c.id, c); return false; }
+  }
+  // right after each recording: a one-tap chip to put that clip in the photo album
+  let lastClip = null, chipTimer = 0;
+  function offerSave(clip) {
+    lastClip = clip;
+    $('saveChip').hidden = false;
+    clearTimeout(chipTimer); chipTimer = setTimeout(() => { $('saveChip').hidden = true; }, 9000);
+  }
+  $('saveChip').addEventListener('click', () => { $('saveChip').hidden = true; if (lastClip) shareClips([lastClip]); });
   async function delClip(id) { memClips.delete(id); try { await idbDo('readwrite', st => st.delete(id)); } catch (e) {} }
   async function refreshClips() {
     let list = [];
@@ -1740,7 +1800,9 @@ html,body{overscroll-behavior:none}
         if (!chunks.length) { resolve(null); return; }
         const blob = new Blob(chunks, { type: mime.split(';')[0] });
         const clip = { ...meta, id: 'c' + at0, at: at0, blob, type: blob.type, burned };
-        await putClip(clip); await refreshClips();
+        const stored = await putClip(clip); await refreshClips();
+        if (!stored) toast('手機空間可能不夠，這段影片只是暫存，請馬上按「存到相簿」', true);
+        offerSave(clip);
         resolve(clip);
       };
       if (burned) draw();
@@ -1780,7 +1842,7 @@ html,body{overscroll-behavior:none}
     $('pip').hidden = false; pv.play().catch(() => {});
     await waitMeta(pv);
     const box = scratching ? { cap: { big: '刮刮中…', small: `${t.price} 元 ${t.name} · ${GAMES[t.game].name}` } } : null;
-    const p = recordLive(ticketMeta(k), box ? 45 : 8, pv, (sec, el) => {
+    const p = recordLive(ticketMeta(k), box ? 90 : 8, pv, (sec, el) => {   // scratching everything can take a while
       if (gen === pipGen) $('pipCount').textContent = box && !k.revealed ? `${el}s` : sec;
     }, box);
     recPendingFor = null;
@@ -1809,8 +1871,9 @@ html,body{overscroll-behavior:none}
   const PICK_LINES = ['哇～整桌都是刮刮樂！讓我看看哪一張在對我笑……', '就決定是你們了！小鶴保佑，今天一定中大獎！'];
   let cueAbort = false, cueRunning = false;
   async function startPickLines() {
-    if (state.pickLinesDone || cueRunning || !CAM.enabled || scene !== 'inside') return;
-    if (!(await camStart())) return;
+    if (state.pickLinesDone || cueRunning || scene !== 'inside') return;
+    if (!(await camStart())) { pickLinesByApp(0); return; }
+    $('cueDone').dataset.app = ''; $('cueDone').textContent = '說完了';
     cueRunning = true; cueAbort = false;
     const pv = $('pipVideo');
     say('先錄兩段開場台詞，照著卡片唸就好！');
@@ -1836,12 +1899,26 @@ html,body{overscroll-behavior:none}
     cueRunning = false;
     if (!cueAbort) { state.pickLinesDone = true; save(); toast('兩段台詞錄好了，開始挑吧！'); say('錄好了？那就挑吧，桌上隨便選！'); }
   }
-  $('cueDone').addEventListener('click', () => { if (CAM.active) CAM.active.stop(); });
-  $('cueSkip').addEventListener('click', () => {
-    cueAbort = true; state.pickLinesDone = true; save();
+  // no live camera: the same two lines go through the phone's camera app, one after the other
+  function pickLinesByApp(i) {
+    cueRunning = true;
+    if (i >= PICK_LINES.length) {
+      cueRunning = false; $('cue').hidden = true; $('cueDone').dataset.app = ''; $('cueDone').textContent = '說完了';
+      state.pickLinesDone = true; save(); toast('兩段台詞錄好了，開始挑吧！'); say('錄好了？那就挑吧，桌上隨便選！');
+      return;
+    }
+    $('cueTitle').textContent = `開始挑彩券｜台詞 ${i + 1} / ${PICK_LINES.length}`;
+    $('cueLine').textContent = `「${PICK_LINES[i]}」`;
+    $('cueCount').textContent = '用相機錄';
+    $('cueDone').disabled = false; $('cueDone').textContent = '打開相機錄'; $('cueDone').dataset.app = String(i);
+    $('cue').hidden = false;
+  }
+  $('cueDone').addEventListener('click', () => {
+    const app = $('cueDone').dataset.app;
+    if (app) { startRecord({ kind: 'pick', n: +app + 1 }); return; }
     if (CAM.active) CAM.active.stop();
-    $('cue').hidden = true;
   });
+  $('cueSkip').hidden = true;   // the lines are required
 
   // --- opening speech ---
   const introLine = () => `大家好，我是今天的幸運女神！我帶了 NT$${fmt(state.brought)} 來小鶴彩券行，目標是把老闆刮到破產！小鶴老闆，準備好你的錢包了嗎？`;
@@ -1851,8 +1928,8 @@ html,body{overscroll-behavior:none}
     $('introScript').append(`「${introLine()}」`);
     $('introStage').hidden = true; $('introRec').hidden = true;
     $('camGo').textContent = '打開前鏡頭'; $('camGo').dataset.step = 'open'; $('camGo').disabled = false;
-    $('camSkip').hidden = false;
-    $('camHint').textContent = '按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每刮開一張，不管有沒有中，鏡頭都會自動錄 10 秒反應。';
+    $('camSkip').hidden = true;   // required: no way in without the opening speech
+    $('camHint').textContent = '一定要錄完才能進門喔！按「打開前鏡頭」後，手機會問能不能用相機和麥克風，請按允許。進店後每刮一張，手指一碰到就會開始錄。';
     $('camOv').hidden = false;
   }
   function finishIntro() { state.introAsked = true; save(); $('camOv').hidden = true; introBusy = false; walkIn(); }
@@ -1877,17 +1954,20 @@ html,body{overscroll-behavior:none}
       const iv = $('introVideo');
       await waitMeta(iv);
       const clip = await recordLive({ kind: 'intro', brought: state.brought }, 15, iv, (sec) => { $('introCount').textContent = sec; });
-      toast(clip ? '感言收進回憶影片了' : '這次沒有錄成功，之後刮開還是會錄');
+      if (!clip) {   // didn't record: try the phone's camera app instead, still required
+        introBusy = false; $('introRec').hidden = true;
+        $('camHint').textContent = '這次沒有錄成功，改用手機相機錄。錄完按「使用影片」就能進門。';
+        $('camGo').textContent = '打開相機'; $('camGo').dataset.step = 'app';
+        return;
+      }
+      toast('感言存好了！');
       finishIntro();
     } else if (step === 'stop') {
       if (CAM.active) CAM.active.stop();
     } else if (step === 'app') {
-      state.introAsked = true; save(); $('camOv').hidden = true;
-      startRecord({ kind: 'intro', brought: state.brought });
-      walkIn();
+      startRecord({ kind: 'intro', brought: state.brought });   // the door opens once the video comes back
     }
   });
-  $('camSkip').addEventListener('click', () => { if (!introBusy) finishIntro(); });
 
   // --- fallback: the phone's own camera app ---
   function startRecord(meta) {
@@ -1900,10 +1980,15 @@ html,body{overscroll-behavior:none}
     const f = camInput.files && camInput.files[0];
     const meta = camPending; camPending = null;
     if (!f || !meta) return;
-    await putClip({ ...meta, id: 'c' + Date.now(), at: Date.now(), blob: f, type: f.type || '', burned: false });
+    const clip = { ...meta, id: 'c' + Date.now(), at: Date.now(), blob: f, type: f.type || '', burned: false };
+    const stored = await putClip(clip);
     await refreshClips();
-    toast(meta.kind === 'intro' ? '感言收進回憶影片了' : '反應收進回憶影片了');
-    if (cur && meta.ticketId === cur.id) showResult(cur, false);
+    if (!stored) toast('手機空間可能不夠，這段影片只是暫存，請馬上按「存到相簿」', true);
+    else toast(meta.kind === 'intro' ? '感言存好了！' : meta.kind === 'pick' ? `台詞 ${meta.n} 存好了` : '反應存好了');
+    offerSave(clip);
+    if (meta.kind === 'intro') finishIntro();
+    else if (meta.kind === 'pick') pickLinesByApp(meta.n);
+    else if (cur && meta.ticketId === cur.id) showResult(cur, false);
   });
   $('result').addEventListener('click', (e) => {
     if (!e.target.closest('[data-rec]') || !cur) return;
