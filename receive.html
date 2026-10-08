@@ -59,13 +59,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
   <header class="sign"><h1>小鶴彩券行</h1><p>影片接收站</p></header>
 
   <section class="card">
-    <h2>① 邀請別人來玩</h2>
+    <h2>① 這台電腦就是影片接收站</h2>
+    <p class="hint">不用號碼、不用配對：任何人用遊戲網址玩，影片都會自動存到這台電腦。這頁開著就會收；沒開的時候，影片會先留在對方手機，下次打開這頁自動補傳。</p>
     <div class="row">
       <label class="field" for="myName"><span>你的名字</span><input id="myName" maxlength="20" placeholder="例如：阿勳"></label>
     </div>
-    <p class="hint">把下面這條連結傳給要玩的人（LINE、訊息都可以）。他們玩的時候，影片會自動傳到這台電腦。</p>
+    <p class="hint">要給別人玩，傳這個網址就好（填了你的名字，對方登記時會自動帶入「誰找你來玩」）：</p>
     <div class="link" id="inviteLink">準備中…</div>
-    <div class="row"><button id="copyLink" type="button">複製邀請連結</button><span class="hint">這台電腦的號碼 <span class="code" id="code">······</span></span></div>
+    <div class="row"><button id="copyLink" type="button">複製遊戲網址</button></div>
   </section>
 
   <section class="card">
@@ -98,14 +99,11 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
   const $ = (id) => document.getElementById(id);
   const ls = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
 
-  // ---- a code that stays the same on this computer, so invite links keep working ----
-  let code = ls.get('xiaohe-recv-code');
-  if (!/^\d{6}$/.test(code || '')) { code = String(Math.floor(100000 + Math.random() * 900000)); ls.set('xiaohe-recv-code', code); }
-  $('code').textContent = code;
+  // ---- the owner's computer answers under one fixed name; the game sends there by default, no code needed ----
+  const HOME_PC = 'xiaohe-hubert0956-pc';
   $('myName').value = ls.get('xiaohe-recv-name') || '';
   function inviteUrl() {
     const u = new URL('./', location.href);
-    u.searchParams.set('pc', code);
     const n = $('myName').value.trim();
     if (n) u.searchParams.set('from', n);
     return u.href;
@@ -116,7 +114,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
   $('copyLink').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(inviteUrl()); $('copyLink').textContent = '複製好了！'; }
     catch (e) { const r = document.createRange(); r.selectNodeContents($('inviteLink')); getSelection().removeAllRanges(); getSelection().addRange(r); $('copyLink').textContent = '已選取，按 Ctrl+C 複製'; }
-    setTimeout(() => { $('copyLink').textContent = '複製邀請連結'; }, 2500);
+    setTimeout(() => { $('copyLink').textContent = '複製遊戲網址'; }, 2500);
   });
 
   // ---- the folder: remembered between visits (Chrome / Edge) ----
@@ -199,11 +197,11 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
   function start() {
     if (!window.Peer) { setStatus('連不到傳送服務，請確認電腦有網路後重新整理。', 'warn'); return; }
     setStatus('連線中…');
-    peer = new Peer('xiaohe-' + code);
+    peer = new Peer(HOME_PC);
     peer.on('open', () => { retry = 0; setStatus('等待玩家的影片…（這頁開著就會自動收）', 'on'); });
     peer.on('error', (e) => {
-      if (e.type === 'unavailable-id') {   // the old session of this page hasn't timed out yet: try the same code again shortly
-        setStatus('號碼還被上一次佔著，幾秒後重試…', 'warn');
+      if (e.type === 'unavailable-id') {   // another tab is open, or the last visit hasn't timed out yet: try again shortly
+        setStatus('接收站好像在別的分頁也開著，或上一次還沒斷乾淨，幾秒後重試…（只留一個接收站分頁就好）', 'warn');
         try { peer.destroy(); } catch (_) {}
         setTimeout(start, Math.min(15000, 3000 + retry++ * 2000));
         return;
