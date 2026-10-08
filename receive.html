@@ -71,12 +71,12 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
 
   <section class="card">
     <h2>② 影片存在哪裡</h2>
-    <p id="dirNote" class="hint">還沒選資料夾：影片會存到「下載」資料夾，不會分類。</p>
-    <div class="row">
+    <p id="dirNote">固定存到這台電腦的 <b>下載\小鶴彩券行影片</b>，每個人玩完都有自己的資料夾，例如「圓圓（阿勳的女朋友）_20261008-1509」，裡面再分成 中獎（依金額）、銘謝惠顧、進場、最後結算。</p>
+    <p class="hint">影片會先下載到「下載」，電腦上的「小鶴彩券行整理程式」會在幾秒內把它們搬進各自的資料夾。第一次瀏覽器問「要下載多個檔案嗎」，請按允許。</p>
+    <div class="row" hidden>
       <button id="pickDir" type="button">選擇存放資料夾</button>
       <button id="resumeDir" type="button" class="ghost" hidden>繼續存到上次的資料夾</button>
     </div>
-    <p class="hint">建議在「下載」裡新增一個「小鶴彩券行影片」資料夾來選。每個玩家會自動有自己的資料夾，例如「圓圓（阿勳的女朋友）_20261008-1509」，裡面再分成 中獎（依金額）、銘謝惠顧、進場、最後結算。</p>
   </section>
 
   <section class="card" aria-live="polite">
@@ -117,14 +117,15 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
     setTimeout(() => { $('copyLink').textContent = '複製遊戲網址'; }, 2500);
   });
 
-  // ---- the folder: remembered between visits (Chrome / Edge) ----
+  // ---- where clips go: always the Downloads folder, named so the organizer on this computer
+  //      (小鶴彩券行整理程式) can move each one into 下載\小鶴彩券行影片\<player>\<kind>\ ----
   let dir = null;
+  const ALWAYS_DOWNLOADS = true;
   const idb = () => new Promise((res, rej) => { const r = indexedDB.open('xiaohe-recv', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
   async function kv(mode, fn) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('kv', mode), q = fn(tx.objectStore('kv')); tx.oncomplete = () => res(q && q.result); tx.onerror = () => rej(tx.error); }); }
   function setDir(h) { dir = h; $('dirNote').textContent = `影片會存到「${h.name}」，每個玩家一個資料夾。`; $('resumeDir').hidden = true; $('pickDir').textContent = '換一個資料夾'; }
-  if (!window.showDirectoryPicker) {
+  if (ALWAYS_DOWNLOADS || !window.showDirectoryPicker) {
     $('pickDir').hidden = true;
-    $('dirNote').textContent = '這個瀏覽器不能選資料夾，影片會存到「下載」資料夾。用 Chrome 或 Edge 打開這頁，就能自動分資料夾。';
   } else {
     kv('readonly', st => st.get('dir')).then(async (h) => {
       if (!h) return;
@@ -161,8 +162,22 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
     const w = await (await d.getFileHandle(fname, { create: true })).createWritable();
     await w.write(blob); await w.close();
   }
+  // "小鶴彩券行影片__<player folder>__<file>": the organizer splits on "__" to know the folder
+  function downloadAs(fname, blob) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  }
   async function saveClip(name, blob, who) {
-    if (!dir) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${playerFolder(who)}_${name}`; document.body.appendChild(a); a.click(); a.remove(); return; }
+    if (!dir) {
+      const folder = playerFolder(who);
+      if (who && who.player && !infoWritten.has(folder)) {
+        infoWritten.add(folder);
+        downloadAs(`小鶴彩券行影片__${folder}__玩家資料.txt`, new Blob([`玩家：${who.player}\r\n誰找來玩：${who.inviter}\r\n關係：${who.relation}\r\n這次遊玩：${who.session}\r\n`], { type: 'text/plain' }));
+      }
+      downloadAs(`小鶴彩券行影片__${folder}__${name}`, blob);
+      return;
+    }
     const top = await dir.getDirectoryHandle(playerFolder(who), { create: true });
     const key = top.name;
     if (who && who.player && !infoWritten.has(key)) {
