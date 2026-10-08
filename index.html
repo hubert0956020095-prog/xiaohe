@@ -382,6 +382,11 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 .pname input:focus-visible{outline:none}
 .pname:focus-within{box-shadow:0 0 0 3px var(--yellow)}
 .upnote{margin:0;font-size:13px;color:var(--muted-ink)}
+.coin-stage{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;padding-block:22px 12px}
+.coin-stage:active{cursor:grabbing}
+.coin-hint{margin:0;font-size:15px;color:var(--yellow);animation:hintBob 1.4s ease-in-out infinite}
+@keyframes hintBob{50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.coin-hint{animation:none}}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
 @media (prefers-reduced-motion:reduce){
   .building,.door{transition:none}.lightbox,.open-sign,.enter{animation:none}.cell.hit{animation:none}.mini{transition:none}
@@ -661,6 +666,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
         <div class="cf tails"><span class="word">愛</span></div>
       </div>
     </div>
+    <p class="coin-hint" id="coinHint">↑ 用手指把硬幣往上撥（每次 NT$500）</p>
     <p class="coin-legend">鶴＝正面，翻倍 · 愛＝反面，減半</p>
     <p class="coin-msg" id="coinMsg" aria-live="polite"></p>
     <ol class="coin-log" id="coinLog"></ol>
@@ -871,6 +877,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       lose() { [[67, 0], [66, .3], [65, .6]].forEach(([m, t]) => tone(N(m), t, .32, { type: 'sawtooth', vol: .06 })); tone(N(64), .9, .9, { type: 'sawtooth', vol: .06, slide: N(57) }); },
       shutter() { noise(0, .04, { vol: .3, freq: 4200 }); noise(.07, .06, { vol: .22, freq: 2600 }); },
       flipStart() { noise(0, .45, { vol: .12, freq: 700, slide: 4200, q: .7 }); for (let i = 0; i < 12; i++) tone(N(98), .12 + i * .1 * (1 + i * .06), .03, { type: 'square', vol: .03 }); },
+      tick() { tone(N(100), 0, .035, { type: 'square', vol: .05 }); noise(0, .02, { vol: .08, freq: 5000 }); },
       flipLand() { tone(N(88), 0, .35, { type: 'triangle', vol: .18 }); tone(N(95), .06, .45, { type: 'triangle', vol: .1 }); noise(0, .05, { vol: .2, freq: 3000 }); },
       love() { [72, 76, 79, 84, 83, 79, 81, 79, 76, 77, 76, 74, 72].forEach((m, i) => { tone(N(m), i * .3, 1.2, { vol: .12 }); tone(N(m + 12), i * .3, .5, { type: 'triangle', vol: .03 }); }); },
       bgmStart() {
@@ -1480,7 +1487,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       msg += `。${settleText()}`;
       btns = '<button class="btn y" type="button" data-c="close">關閉</button>';
     } else {
-      const head = !last ? `每丟一次 NT$${FEE}，正面翻倍、反面減半。準備好了嗎？`
+      const head = !last ? `每丟一次 NT$${FEE}，正面翻倍、反面減半。用手指把硬幣往上撥！`
         : last.heads ? `正面！翻倍到 NT$${fmt(c.amount)}！要見好就收，還是再賭一次？`
         : `反面……減半剩 NT$${fmt(c.amount)}。要再丟一次拚回來嗎？`;
       const keep = `<button class="btn ghost" type="button" data-c="keep">${last ? '' : '不玩了，'}收下 NT$${fmt(c.amount)}</button>`;
@@ -1489,39 +1496,38 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
         btns = keep + '<button class="btn y" type="button" data-c="add">再拿錢出來</button>';
       } else {
         msg = head;
-        btns = keep + `<button class="btn y" type="button" data-c="flip">付 ${FEE} 丟硬幣</button>`;
+        btns = keep + `<button class="btn y" type="button" data-c="flip">幫我丟（付 ${FEE}）</button>`;
       }
     }
     $('coinMsg').textContent = msg;
     $('coinBtns').innerHTML = btns;
-    $('coinLater').hidden = c.done;
+    $('coinLater').hidden = c.done; $('coinHint').hidden = c.done;
     if (c.done) endingStop();
   }
-  function flip() {
+  // The flick sets the toss: a harder flick goes higher and spins longer. After landing the coin teeters between
+  // the two faces for a couple of seconds, so it isn't clear which side it'll show until it stops.
+  // The result is decided (and saved) the moment it's thrown, so reloading can't re-roll it.
+  let coinLive = null;
+  const SCRIPT = [false, false, true, true];   // 5,200 → 2,600 → 1,300 → 2,600 → 5,200; after that a real coin, 45% heads
+  function flip(power = .6) {
     const c = state.coin;
     if (flipping || c.done) return;
     if (state.wallet < FEE) { renderCoin(); return; }
-    const fee = FEE;   // every flip is paid, the first one too
-    // the story: lose it, win it back, lose it again, win it back, then double it; after that it's a real coin
-    const SCRIPT = [false, true, false, true, true], i = c.flips.length;
-    const heads = i < SCRIPT.length ? SCRIPT[i] : rand() < .5;
+    const fee = FEE, i = c.flips.length;
+    const heads = i < SCRIPT.length ? SCRIPT[i] : rand() < .45;
     const from = c.amount, to = heads ? from * 2 : Math.round(from / 2);
     c.flips.push({ heads, from, to, fee });
-    c.amount = to; c.paying = false;   // heads no longer ends it: she keeps going until she takes the money
+    c.amount = to; c.paying = false;
     state.won += to - from;
     state.spent += fee;
     state.wallet += to - from - fee;
     save(); render();
     flipping = true;
-    $('coinBtns').innerHTML = ''; $('coinLater').hidden = true;
+    $('coinBtns').innerHTML = ''; $('coinLater').hidden = true; $('coinHint').hidden = true;
     $('coinMsg').textContent = '硬幣飛起來了……';
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const coinFrom = coinRot;
-    setCoin(Math.ceil((coinRot + 1800) / 360) * 360 + (heads ? 0 : 180), !reduce);
-    coinAnim = { from: coinFrom, to: coinRot, t0: performance.now(), dur: reduce ? 1 : 1600 };
     SFX.flipStart();
-    if (fee) floatText(`−NT$${fmt(fee)}`, $('coinAmt'), 'minus');
-    setTimeout(() => {
+    floatText(`−NT$${fmt(fee)}`, $('coinAmt'), 'minus');
+    tossCoin(heads, power, () => {
       flipping = false;
       renderCoin();
       SFX.flipLand(); shake(document.querySelector('.coinbox'));
@@ -1531,8 +1537,67 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
         burst(200, true); burst(70, { kind: 'star', x: mx, y: my, power: 1.2 });
         say('翻倍了！老闆的錢包在哭');
       } else { setTimeout(SFX.lose, 150); flash('rgba(30,20,50,.6)'); say('反面……要不要再拚一次？'); }
-    }, reduce ? 0 : 1700);
+    });
   }
+  function tossCoin(heads, power, done) {
+    const el = $('coin3d'), face = heads ? 0 : 180;
+    const land = Math.ceil((coinRot + (5 + Math.round(power * 7)) * 360) / 360) * 360 + face;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { coinLive = null; setCoin(land, false); done(); return; }
+    const A0 = 176, H = 120 + power * 220, T1 = 850 + power * 650, TW = 3000;   // tilt at touchdown, height, flight ms, teeter ms
+    const start = coinRot, t0 = performance.now();
+    let lastFace = null;
+    el.style.transition = 'none';
+    const step = (now) => {
+      const t = now - t0;
+      let ang, y = 0, sc = 1;
+      if (t < T1) {   // in the air: up and down on a curve, closer to the eye at the top, spinning fast
+        const p = t / T1;
+        y = -4 * H * p * (1 - p); sc = 1 + .4 * Math.sin(Math.PI * p);
+        ang = start + (land + A0 - start) * (1 - Math.pow(1 - p, 1.5));
+      } else {        // on the table: rocks across the edge, showing one face then the other, and settles
+        const q = t - T1;
+        if (q > TW) { coinLive = null; setCoin(land, false); done(); return; }
+        // rocks over the edge several times (the last fake-out about 1.2 s in), then eases flat by the end
+        ang = land + A0 * Math.exp(-q / 2000) * (1 - Math.pow(q / TW, 4)) * Math.cos(2 * Math.PI * q / 1300);
+        y = -Math.abs(Math.sin(Math.PI * q / 360)) * 22 * Math.exp(-q / 350);
+        const f = Math.cos(ang * Math.PI / 180) >= 0;
+        if (lastFace !== null && f !== lastFace) SFX.tick();
+        lastFace = f;
+      }
+      coinLive = ang;
+      el.style.transform = `translateY(${y.toFixed(1)}px) scale(${sc.toFixed(3)}) rotateY(${ang.toFixed(1)}deg)`;
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  // flick gesture on the coin: drag up and let go
+  (() => {
+    const stage = document.querySelector('.coin-stage');
+    let g = null;
+    stage.addEventListener('pointerdown', (e) => {
+      if (flipping || !state.coin || state.coin.done) return;
+      g = { y0: e.clientY, y: e.clientY, t: performance.now(), vy: 0 };
+      try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    stage.addEventListener('pointermove', (e) => {
+      if (!g) return;
+      const now = performance.now(), dt = Math.max(1, now - g.t);
+      g.vy = .5 * g.vy + .5 * ((g.y - e.clientY) / dt);   // px per ms, upward is positive
+      g.y = e.clientY; g.t = now;
+      const lift = Math.max(0, Math.min(60, g.y0 - e.clientY));
+      $('coin3d').style.transition = 'none';
+      $('coin3d').style.transform = `translateY(${-lift}px) rotateY(${coinRot}deg)`;
+    });
+    stage.addEventListener('pointerup', () => {
+      if (!g) return;
+      const up = g.y0 - g.y, v = g.vy; g = null;
+      if (up > 30 && v > .25) {
+        if (state.wallet < FEE) { setCoin(coinRot, false); renderCoin(); toast('錢包不夠 500，先拿錢出來'); return; }
+        flip(Math.max(0, Math.min(1, (v - .25) / 1.6)));
+      } else { setCoin(coinRot, false); toast('手指往上用力撥，硬幣才會飛起來！'); }
+    });
+    stage.addEventListener('pointercancel', () => { g = null; setCoin(coinRot, false); });
+  })();
   $('coinBtns').addEventListener('click', (e) => {
     const b = e.target.closest('[data-c]'); if (!b || flipping) return;
     const c = state.coin, act = b.dataset.c;
@@ -2566,6 +2631,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   // the ending: the 5200 card, then the coin game with the coin actually flipping
   let coinAnim = null, endingRec = false;
   function coinAngle() {
+    if (coinLive != null) return coinLive;   // the coin in flight / teetering, exactly as on screen
     if (coinAnim) {
       const p = Math.min(1, (performance.now() - coinAnim.t0) / coinAnim.dur);
       if (p < 1) return coinAnim.from + (coinAnim.to - coinAnim.from) * (1 - Math.pow(1 - p, 3));
