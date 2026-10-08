@@ -1328,9 +1328,9 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   function bindFoil(f) {
     const pos = (e) => { const r = f.c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     f.c.addEventListener('pointerdown', (e) => {
-      if (!cur || cur.revealed || f.done) return;
+      if (!cur || cur.revealed || f.c.classList.contains('gone')) return;
       armRec(cur);
-      f.drawing = true; f.last = pos(e); f.c.setPointerCapture(e.pointerId); scratch(f, f.last);
+      f.drawing = true; f.last = pos(e); try { f.c.setPointerCapture(e.pointerId); } catch (err) {} scratch(f, f.last);
     });
     f.c.addEventListener('pointermove', (e) => { if (f.drawing) scratch(f, pos(e)); });
     const stop = () => { if (f.drawing) { f.drawing = false; check(f); } };
@@ -1353,7 +1353,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     let clear = 0, n = 0;
     for (let y = 0; y < h; y += 8) for (let xx = 0; xx < w; xx += 8) { n++; if (d[(y * w + xx) * 4 + 3] < 40) clear++; }
     if (clear / n > .85) {   // a zone counts only when it's almost all scratched off; its foil stays until every zone is done
-      f.done = true; f.drawing = false;
+      f.done = true;   // keep the finger going: the silver left in this zone can still be scratched
       if (foils.every(o => o.done)) allScratched(false); else SFX.reveal();
     }
   }
