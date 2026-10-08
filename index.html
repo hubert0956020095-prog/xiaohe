@@ -640,10 +640,10 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     <p class="fin-520" id="fin520">5200，就是我愛你</p>
     <p class="fin-msg" id="finMsg">沒關係，不是最大獎，但是我愛你</p>
     <p class="fin-stats" id="finStats"></p>
-    <p class="fin-dare">敢不敢玩最後的殘酷遊戲？丟硬幣，正面翻倍、反面減半。</p>
+    <p class="fin-dare">敢不敢玩最後的殘酷遊戲？丟硬幣，每次 NT$500，正面翻倍、反面減半，想停隨時收下。</p>
     <div class="fin-btns">
       <button class="btn ghost" id="finKeep" type="button">我也愛你，收下就好</button>
-      <button class="btn y" id="finCoin" type="button">丟硬幣</button>
+      <button class="btn y" id="finCoin" type="button">丟硬幣（每次 500）</button>
     </div>
   </div>
 </div>
@@ -653,7 +653,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   <div class="coinbox" role="dialog" aria-modal="true" aria-labelledby="coinTitle">
     <p class="fin-k">殘酷遊戲</p>
     <h3 id="coinTitle">丟硬幣</h3>
-    <p class="coin-rule">正面翻倍、反面減半。第一次免費；減半之後，付老闆 NT$500 可以再丟一次。翻倍就結束。</p>
+    <p class="coin-rule">每丟一次付 NT$500。正面翻倍、反面減半，可以一直賭，想停的時候按「收下」。</p>
     <div class="stake"><span>現在的獎金</span><b id="coinAmt">NT$5,200</b></div>
     <div class="coin-stage">
       <div class="coin3d" id="coin3d">
@@ -1473,24 +1473,24 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     $('coinLog').innerHTML = c.flips.map((f, i) => `<li>第 ${i + 1} 次 · ${f.heads ? '正面，翻倍' : '反面，減半'} · ${fmt(f.from)} → ${fmt(f.to)}${f.fee ? ` · 付了 ${f.fee} 元` : ' · 免費'}</li>`).join('');
     let msg, btns;
     if (c.done) {
-      msg = last && last.heads ? `翻倍成功！最後拿到 NT$${fmt(c.amount)}，我愛你`
+      msg = c.amount > c.base ? `翻倍成功！最後拿到 NT$${fmt(c.amount)}，我愛你`
         : c.amount === c.base ? `收下 NT$${fmt(c.amount)}，我愛你`
         : `最後拿到 NT$${fmt(c.amount)}。錢會減半，但我愛你不會減半`;
       if (fees) msg += `（丟硬幣付了 NT$${fmt(fees)}）`;
       msg += `。${settleText()}`;
       btns = '<button class="btn y" type="button" data-c="close">關閉</button>';
-    } else if (!last) {
-      msg = '第一次免費。準備好了嗎？';
-      btns = `<button class="btn ghost" type="button" data-c="keep">不玩了，收下 NT$${fmt(c.amount)}</button><button class="btn y" type="button" data-c="flip">丟硬幣（免費）</button>`;
-    } else if (c.paying) {
-      msg = `從錢包付 NT$${FEE}，付完剩 NT$${fmt(state.wallet - FEE)}。`;
-      btns = `<button class="btn ghost" type="button" data-c="unpay">算了</button><button class="btn y" type="button" data-c="flip">付 ${FEE}，丟！</button>`;
-    } else if (state.wallet < FEE) {
-      msg = `反面……獎金減半，剩 NT$${fmt(c.amount)}。錢包只剩 NT$${fmt(state.wallet)}，要再丟得先拿錢出來。`;
-      btns = `<button class="btn ghost" type="button" data-c="keep">收下 NT$${fmt(c.amount)}</button><button class="btn y" type="button" data-c="add">再拿錢出來</button>`;
     } else {
-      msg = `反面……獎金減半，剩 NT$${fmt(c.amount)}。要付 ${FEE} 元再丟一次嗎？`;
-      btns = `<button class="btn ghost" type="button" data-c="keep">收下 NT$${fmt(c.amount)}</button><button class="btn y" type="button" data-c="pay">付 ${FEE} 元再丟一次</button>`;
+      const head = !last ? `每丟一次 NT$${FEE}，正面翻倍、反面減半。準備好了嗎？`
+        : last.heads ? `正面！翻倍到 NT$${fmt(c.amount)}！要見好就收，還是再賭一次？`
+        : `反面……減半剩 NT$${fmt(c.amount)}。要再丟一次拚回來嗎？`;
+      const keep = `<button class="btn ghost" type="button" data-c="keep">${last ? '' : '不玩了，'}收下 NT$${fmt(c.amount)}</button>`;
+      if (state.wallet < FEE) {
+        msg = `${head} 錢包只剩 NT$${fmt(state.wallet)}，要先拿錢出來才能丟。`;
+        btns = keep + '<button class="btn y" type="button" data-c="add">再拿錢出來</button>';
+      } else {
+        msg = head;
+        btns = keep + `<button class="btn y" type="button" data-c="flip">付 ${FEE} 丟硬幣</button>`;
+      }
     }
     $('coinMsg').textContent = msg;
     $('coinBtns').innerHTML = btns;
@@ -1500,12 +1500,14 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   function flip() {
     const c = state.coin;
     if (flipping || c.done) return;
-    const fee = c.flips.length ? FEE : 0;
-    const heads = rand() < .5;
+    if (state.wallet < FEE) { renderCoin(); return; }
+    const fee = FEE;   // every flip is paid, the first one too
+    // the story: lose it, win it back, lose it again, win it back, then double it; after that it's a real coin
+    const SCRIPT = [false, true, false, true, true], i = c.flips.length;
+    const heads = i < SCRIPT.length ? SCRIPT[i] : rand() < .5;
     const from = c.amount, to = heads ? from * 2 : Math.round(from / 2);
     c.flips.push({ heads, from, to, fee });
-    c.amount = to; c.paying = false;
-    if (heads) c.done = true;
+    c.amount = to; c.paying = false;   // heads no longer ends it: she keeps going until she takes the money
     state.won += to - from;
     state.spent += fee;
     state.wallet += to - from - fee;
