@@ -295,7 +295,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 .coin3d{width:130px;height:130px;position:relative;transform-style:preserve-3d;transition:transform 1.6s cubic-bezier(.2,.75,.25,1)}
 .coin3d .cf{position:absolute;inset:0;border-radius:50%;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:grid;place-items:center;
   background:radial-gradient(circle at 35% 30%,#fff2b8,#e8c35a 50%,#a07a1c);box-shadow:inset 0 0 0 6px #c99a2e,inset 0 0 0 9px #f5d77a,0 10px 20px rgba(0,0,0,.4)}
-.coin3d .cf.tails{transform:rotateY(180deg)}
+.coin3d .cf.tails{transform:rotateX(180deg)}
 .cf .inner{width:66%;height:66%;border-radius:50%;background:var(--red);display:grid;place-items:center}
 .cf .inner svg{width:80%;height:60%}
 .cf .word{font-family:var(--sign-font);font-weight:900;font-size:50px;color:var(--red-deep);line-height:1}
@@ -387,6 +387,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 .coin-hint{margin:0;font-size:15px;color:var(--yellow);animation:hintBob 1.4s ease-in-out infinite}
 @keyframes hintBob{50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){.coin-hint{animation:none}}
+.who-line{margin:0;text-align:center;font-size:20px;color:var(--red-deep);min-height:1.5em}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
 @media (prefers-reduced-motion:reduce){
   .building,.door{transition:none}.lightbox,.open-sign,.enter{animation:none}.cell.hit{animation:none}.mini{transition:none}
@@ -708,6 +709,22 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
 </div>
 <input class="vh" id="camInput" type="file" accept="video/*" capture="user" tabindex="-1" aria-hidden="true">
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="overlay" id="whoOv" hidden>
+  <form class="sheet" id="whoForm" role="dialog" aria-modal="true" aria-labelledby="whoTitle">
+    <h3 id="whoTitle">歡迎光臨！先登記一下</h3>
+    <label class="pname" for="whoName"><span>你的名字</span><input id="whoName" maxlength="20" autocomplete="nickname" placeholder="例如：圓圓"></label>
+    <label class="pname" for="whoFrom"><span>誰找你來玩</span><input id="whoFrom" maxlength="20" placeholder="例如：阿勳"></label>
+    <p class="upnote">你是他的：</p>
+    <div class="chips" id="whoRel">
+      <button type="button" data-v="女朋友">女朋友</button><button type="button" data-v="男朋友">男朋友</button><button type="button" data-v="朋友">朋友</button>
+      <button type="button" data-v="家人">家人</button><button type="button" data-v="同事">同事</button><button type="button" data-v="其他">其他</button>
+    </div>
+    <p class="who-line" id="whoLine"></p>
+    <p class="upnote">小鶴彩券行全程錄影，影片會存給找你來玩的人。</p>
+    <p class="err" id="whoErr" hidden></p>
+    <div class="row"><button class="btn ghost" type="button" id="whoCancel">再想想</button><button class="btn y" type="submit">登記好了</button></div>
+  </form>
+</div>
 <div class="overlay" id="gateOv" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
     <h3 id="gateTitle">要開鏡頭才能進店喔</h3>
@@ -1132,6 +1149,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   let entering = false;
   function enter() {
     if (entering) return;
+    if (!state.player) { openWho(); return; }
     if (!state.brought) { openBring('enter'); return; }
     enterShop();
   }
@@ -1462,8 +1480,8 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   let coinRot = 0, flipping = false;
   function setCoin(deg, animate) {
     const el = $('coin3d');
-    if (!animate) { el.style.transition = 'none'; el.style.transform = `rotateY(${deg}deg)`; void el.offsetWidth; el.style.transition = ''; }
-    else el.style.transform = `rotateY(${deg}deg)`;
+    if (!animate) { el.style.transition = 'none'; el.style.transform = `rotateX(${deg}deg)`; void el.offsetWidth; el.style.transition = ''; }
+    else el.style.transform = `rotateX(${deg}deg)`;
     coinRot = deg;
   }
   function openCoin() {
@@ -1565,7 +1583,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
         lastFace = f;
       }
       coinLive = ang;
-      el.style.transform = `translateY(${y.toFixed(1)}px) scale(${sc.toFixed(3)}) rotateY(${ang.toFixed(1)}deg)`;
+      el.style.transform = `translateY(${y.toFixed(1)}px) scale(${sc.toFixed(3)}) rotateX(${ang.toFixed(1)}deg)`;
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -1586,7 +1604,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       g.y = e.clientY; g.t = now;
       const lift = Math.max(0, Math.min(60, g.y0 - e.clientY));
       $('coin3d').style.transition = 'none';
-      $('coin3d').style.transform = `translateY(${-lift}px) rotateY(${coinRot}deg)`;
+      $('coin3d').style.transform = `translateY(${-lift}px) rotateX(${coinRot}deg)`;
     });
     stage.addEventListener('pointerup', () => {
       if (!g) return;
@@ -1965,11 +1983,11 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       rec.onstop = async () => {
         if (!chunks.length) { resolve(null); return; }
         const blob = new Blob(chunks, { type: mime.split(';')[0] });
-        const clip = { ...meta, id: 'c' + at0, at: at0, blob, type: blob.type, burned, session: state.session, player: state.player };
+        const clip = { ...meta, id: 'c' + at0, at: at0, blob, type: blob.type, burned, session: state.session, player: state.player, inviter: state.inviter, relation: state.relation };
         const stored = await putClip(clip); await refreshClips();
         if (!stored) toast('手機空間可能不夠，這段影片只是暫存，請馬上按「存到相簿」', true);
         offerSave(clip);
-        uploadPending();
+        uploadPending(); pcSync();
         resolve(clip);
       };
       if (burned) draw();
@@ -2152,7 +2170,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     const f = camInput.files && camInput.files[0];
     const meta = camPending; camPending = null;
     if (!f || !meta) return;
-    const clip = { ...meta, id: 'c' + Date.now(), at: Date.now(), blob: f, type: f.type || '', burned: false, session: state.session, player: state.player };
+    const clip = { ...meta, id: 'c' + Date.now(), at: Date.now(), blob: f, type: f.type || '', burned: false, session: state.session, player: state.player, inviter: state.inviter, relation: state.relation };
     const stored = await putClip(clip);
     await refreshClips();
     if (!stored) toast('手機空間可能不夠，這段影片只是暫存，請馬上按「存到相簿」', true);
@@ -2309,7 +2327,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
         $('xferMsg').textContent = `傳送中 ${i + 1} / ${todo.length}：${fileName(c)}`;
         const data = await c.blob.arrayBuffer();
         const acked = new Promise((res) => { waiting = res; });
-        conn.send({ i, total: todo.length, name: fileName(c), type: c.blob.type || 'video/mp4', data });
+        conn.send({ i, total: todo.length, name: fileName(c), type: c.blob.type || 'video/mp4', data, who: whoOf(c) });
         await Promise.race([acked, timeout(180000)]);
         c.sent = true; await putClip(c);
         $('xferBar').style.width = ((i + 1) / todo.length * 100) + '%';
@@ -2417,7 +2435,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     try {
       const out = await composite(c, (t, d) => { $('mkText').textContent = `正在把獎項印進影片… ${Math.floor(t)} / ${Math.round(d)} 秒`; });
       await putClip({ ...c, blob: out.blob, type: out.blob.type, burned: true });
-      setTimeout(uploadPending, 500);   // now it has its banner: send it up
+      setTimeout(() => { uploadPending(); pcSync(); }, 500);   // now it has its banner: send it up
       await refreshClips(); renderVids();
       toast('獎項印好了，按「存到相簿」');
     } catch (e) { toast('這支手機不能在網頁裡合成，可以直接存原始檔'); }
@@ -2655,7 +2673,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     g.fillStyle = rootTok('--hot'); g.font = `22px ${rootTok('--body')}`; g.fillText('殘酷遊戲 · 丟硬幣', cx, Y + 70);
     g.fillStyle = rootTok('--yellow'); g.font = `46px ${rootTok('--num')}`; g.fillText($('coinAmt').textContent, cx, Y + 120);
     const ang = coinAngle() * Math.PI / 180, cosv = Math.cos(ang), R = 72, cy = Y + 245;
-    g.save(); g.translate(cx, cy); g.scale(Math.max(.05, Math.abs(cosv)), 1);
+    g.save(); g.translate(cx, cy); g.scale(1, Math.max(.05, Math.abs(cosv)));
     const grad = g.createRadialGradient(-R * .3, -R * .35, 4, 0, 0, R);
     grad.addColorStop(0, '#fff2b8'); grad.addColorStop(.5, '#e8c35a'); grad.addColorStop(1, '#a07a1c');
     g.fillStyle = grad; g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fill();
@@ -2738,12 +2756,93 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   addEventListener('online', uploadPending);
   setTimeout(uploadPending, 3000);
 
+  // ---- sign-in at the door ----
+  const URLQ = new URLSearchParams(location.search);
+  let whoRel = '';
+  function syncWhoLine() {
+    for (const b of $('whoRel').children) b.setAttribute('aria-pressed', String(b.dataset.v === whoRel));
+    const n = $('whoName').value.trim(), f = $('whoFrom').value.trim();
+    $('whoLine').textContent = n && f && whoRel ? `${n} 是 ${f} 的 ${whoRel}` : '';
+  }
+  function openWho() {
+    $('whoName').value = state.player || '';
+    $('whoFrom').value = state.inviter || URLQ.get('from') || localStorage.getItem('xiaohe-from') || '';
+    whoRel = state.relation || '';
+    $('whoErr').hidden = true; syncWhoLine();
+    $('whoOv').hidden = false; $('whoName').focus();
+  }
+  $('whoRel').addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return; whoRel = b.dataset.v; SFX.pick(); syncWhoLine(); });
+  $('whoName').addEventListener('input', syncWhoLine); $('whoFrom').addEventListener('input', syncWhoLine);
+  $('whoCancel').addEventListener('click', () => { $('whoOv').hidden = true; });
+  $('whoForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const n = $('whoName').value.trim().slice(0, 20), f = $('whoFrom').value.trim().slice(0, 20);
+    const err = !n ? '請填你的名字。' : !f ? '請填是誰找你來玩的。' : !whoRel ? '請選你是他的什麼人。' : '';
+    if (err) { $('whoErr').textContent = err; $('whoErr').hidden = false; return; }
+    const d = new Date(), p = (x) => String(x).padStart(2, '0');
+    state.player = n; state.inviter = f; state.relation = whoRel;
+    state.session = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}_${Math.random().toString(36).slice(2, 6)}`;
+    save();
+    $('whoOv').hidden = true;
+    toast(state.pcCode ? `歡迎 ${n}！影片會自動存到 ${f} 的電腦` : `歡迎 ${n}！`);
+    openBring('enter');
+  });
+  const whoOf = (c) => ({ player: c.player || state.player || '', inviter: c.inviter || state.inviter || '', relation: c.relation || state.relation || '', session: c.session || state.session || '' });
+
+  // ---- live link to the inviter's computer (receive.html): every clip is sent as soon as it's saved ----
+  // The invite link carries the computer's code (?pc=123456). Nothing is lost if the computer is off:
+  // clips wait on the phone and go over the next time the link works.
+  const PC = { peer: null, conn: null, busy: false, waiting: null };
+  const tmo = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
+  async function pcConnect() {
+    if (PC.conn && PC.conn.open) return PC.conn;
+    await loadPeer();
+    if (!PC.peer || PC.peer.destroyed || PC.peer.disconnected) {
+      try { PC.peer && PC.peer.destroy(); } catch (e) {}
+      PC.peer = new Peer();
+      await Promise.race([new Promise((res, rej) => { PC.peer.on('open', res); PC.peer.on('error', rej); }), tmo(15000)]);
+    }
+    const conn = PC.peer.connect('xiaohe-' + state.pcCode, { reliable: true, serialization: 'binary' });
+    await Promise.race([new Promise((res, rej) => { conn.on('open', res); conn.on('error', rej); PC.peer.on('error', rej); }), tmo(20000)]);
+    conn.on('data', (d) => { if (d && d.ack != null && PC.waiting) { const w = PC.waiting; PC.waiting = null; w(); } });
+    conn.on('close', () => { if (PC.conn === conn) PC.conn = null; });
+    PC.conn = conn;
+    return conn;
+  }
+  async function pcSync() {
+    if (!state || !state.pcCode || PC.busy || xferBusy || navigator.onLine === false) return;
+    const todo = clips.filter(c => !c.sent && c.session && c.burned !== false && c.blob);
+    if (!todo.length) return;
+    PC.busy = true;
+    try {
+      const conn = await pcConnect();
+      for (const c of todo) {
+        const data = await c.blob.arrayBuffer();
+        const acked = new Promise((res) => { PC.waiting = res; });
+        conn.send({ live: true, name: fileName(c), type: c.blob.type || 'video/mp4', data, who: whoOf(c) });
+        await Promise.race([acked, tmo(120000)]);
+        c.sent = true; await putClip(c);
+      }
+    } catch (e) { console.warn('[pc link] will retry:', e && (e.type || e.message)); PC.conn = null; }
+    finally {
+      PC.busy = false;
+      await refreshClips();
+      if (!$('vidOv').hidden) renderVids();
+    }
+  }
+  setInterval(pcSync, 15000);
+  addEventListener('online', pcSync);
+
   // ---------- boot ----------
   function start(data) {
+    const pcParam = (new URLSearchParams(location.search).get('pc') || '').replace(/\D/g, '');
     state = valid(data && data.state) ? data.state : (load() || printBatch(DEFAULT_CONFIG, 'A', DEFAULT_BONUS));
     save();
+    if (pcParam.length === 6) { state.pcCode = pcParam; save(); }
+    const fromParam = new URLSearchParams(location.search).get('from'); if (fromParam) { try { localStorage.setItem('xiaohe-from', fromParam.slice(0, 20)); } catch (e) {} }
     render();
     showScene(data && data.scene === 'inside' ? 'inside' : 'front');
+    setTimeout(pcSync, 2500);
   }
   start({});
 })();

@@ -8,10 +8,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Huninn&family=Noto+Sans+TC:wght@900&display=swap">
 <style>
-/* Layout: the shop's red lightbox on top, one card with the pairing code and progress, then the list of received clips. Same night look as the game. */
+/* Layout: the shop's red lightbox, then three steps down the page (your name + invite link, the folder, live status),
+   then everyone who has played, newest first. Same night look as the game. */
 :root{
-  --sky:#0d1230; --sky-2:#1d2350; --red:#d7262e; --red-deep:#9e1820; --yellow:#ffd84a;
-  --paper:#fff8e6; --ink:#1d1512; --muted:#c9b79c; --muted-ink:#6f5f4c; --win:#3ddc97;
+  --sky:#0d1230; --sky-2:#1d2350; --red:#d7262e; --red-deep:#9e1820; --yellow:#ffd84a; --yellow-deep:#d9a91a;
+  --paper:#fff8e6; --ink:#1d1512; --muted:#c9b79c; --muted-ink:#6f5f4c; --win:#3ddc97; --hot:#ff4d6d;
   --sign-font:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
   --body:"Huninn","Microsoft JhengHei","PingFang TC",sans-serif;
   --num:"Bungee","Arial Black",Impact,sans-serif;
@@ -19,81 +20,135 @@
 }
 html,body{min-height:100%}
 body{margin:0;background:linear-gradient(180deg,var(--sky),var(--sky-2));color:var(--paper);font-family:var(--body);font-size:16px;line-height:1.6}
-.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:32px 48px;display:flex;flex-direction:column;gap:24px}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:32px 56px;display:flex;flex-direction:column;gap:20px}
 .sign{align-self:center;background:var(--red);border:4px solid #e9e9ee;border-radius:8px;padding:10px 26px;text-align:center;box-shadow:0 0 30px rgba(215,38,46,.6)}
 .sign h1{margin:0;font-family:var(--sign-font);font-weight:900;color:var(--yellow);font-size:clamp(30px,7vw,44px);letter-spacing:.06em;line-height:1.1}
 .sign p{margin:2px 0 0;font-size:14px;letter-spacing:.3em}
-.card{background:var(--paper);color:var(--ink);border-radius:18px;padding:22px 20px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
-.card .k{margin:0;color:var(--muted-ink)}
-.code{font-family:var(--num);font-size:clamp(48px,13vw,80px);letter-spacing:.15em;line-height:1;color:var(--red-deep);font-variant-numeric:tabular-nums}
-.status{margin:0;font-size:18px}
-.bar{width:100%;height:10px;border-radius:99px;background:#eadfc4;overflow:hidden}
+.card{background:var(--paper);color:var(--ink);border-radius:16px;padding:18px 18px;display:flex;flex-direction:column;gap:10px}
+.card h2{margin:0;font-weight:400;font-size:18px;display:flex;gap:10px;align-items:baseline}
+.card h2 b{font-family:var(--num);font-weight:400;color:var(--red-deep)}
+.card p{margin:0}
+.hint{color:var(--muted-ink);font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.field{display:flex;align-items:center;gap:10px;border:2px solid var(--ink);border-radius:12px;padding:6px 12px;background:#fff;flex:1;min-width:0}
+.field span{font-size:14px;color:var(--muted-ink);white-space:nowrap}
+.field input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:18px;color:var(--ink);padding:4px 0}
+.field input:focus-visible{outline:none}
+.field:focus-within{box-shadow:0 0 0 3px var(--yellow)}
+.link{font-family:ui-monospace,Consolas,monospace;font-size:14px;background:#f3e6c4;border-radius:10px;padding:10px 12px;overflow-wrap:anywhere;user-select:all}
+.code{font-family:var(--num);font-size:34px;letter-spacing:.12em;color:var(--red-deep);font-variant-numeric:tabular-nums}
+button{font:inherit;border:0;border-radius:99px;padding:9px 18px;background:var(--yellow);color:var(--ink);cursor:pointer;box-shadow:0 3px 0 var(--yellow-deep)}
+button.ghost{background:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
+button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.status{display:flex;align-items:center;gap:10px;font-size:17px}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--muted);flex:none}
+.dot.on{background:var(--win);box-shadow:0 0 0 4px rgba(61,220,151,.25)}
+.dot.warn{background:var(--hot)}
+.bar{height:8px;border-radius:99px;background:#eadfc4;overflow:hidden}
 .bar i{display:block;height:100%;width:0;background:var(--win);transition:width .3s}
-.head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-h2{margin:0;font-weight:400;font-size:20px}
-h2 span{font-family:var(--num);color:var(--yellow)}
-button{font:inherit;border:0;border-radius:99px;padding:8px 18px;background:var(--yellow);color:var(--ink);cursor:pointer}
-button:focus-visible,a:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
-.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.list li{display:flex;justify-content:space-between;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(201,183,156,.25);border-radius:10px;padding:8px 12px;min-width:0}
-.list a{color:var(--paper);overflow-wrap:anywhere}
-.list span{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.players{display:flex;flex-direction:column;gap:10px}
+.player{background:rgba(255,255,255,.06);border:1px solid rgba(201,183,156,.25);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.player b{font-weight:400;font-size:18px;color:var(--yellow)}
+.player .meta{color:var(--muted);font-size:14px}
+.player ol{margin:0;padding-left:20px;font-size:14px;color:var(--paper);max-height:160px;overflow:auto}
 .empty{color:var(--muted);margin:0}
-.note{color:var(--muted);font-size:14px;margin:0}
 </style>
 </head>
 <body>
 <main class="wrap">
   <header class="sign"><h1>小鶴彩券行</h1><p>影片接收站</p></header>
 
+  <section class="card">
+    <h2>① 邀請別人來玩</h2>
+    <div class="row">
+      <label class="field" for="myName"><span>你的名字</span><input id="myName" maxlength="20" placeholder="例如：阿勳"></label>
+    </div>
+    <p class="hint">把下面這條連結傳給要玩的人（LINE、訊息都可以）。他們玩的時候，影片會自動傳到這台電腦。</p>
+    <div class="link" id="inviteLink">準備中…</div>
+    <div class="row"><button id="copyLink" type="button">複製邀請連結</button><span class="hint">這台電腦的號碼 <span class="code" id="code">······</span></span></div>
+  </section>
+
+  <section class="card">
+    <h2>② 影片存在哪裡</h2>
+    <p id="dirNote" class="hint">還沒選資料夾：影片會存到「下載」資料夾，不會分類。</p>
+    <div class="row">
+      <button id="pickDir" type="button">選擇存放資料夾</button>
+      <button id="resumeDir" type="button" class="ghost" hidden>繼續存到上次的資料夾</button>
+    </div>
+    <p class="hint">建議在「下載」裡新增一個「小鶴彩券行影片」資料夾來選。每個玩家會自動有自己的資料夾，例如「圓圓（阿勳的女朋友）_20261008-1509」，裡面再分成 中獎（依金額）、銘謝惠顧、進場、最後結算。</p>
+  </section>
+
   <section class="card" aria-live="polite">
-    <p class="k">在手機遊戲的「影片」→「傳到電腦」輸入這組號碼</p>
-    <div class="code" id="code">······</div>
-    <p class="status" id="status">準備中…</p>
+    <h2>③ 接收狀態</h2>
+    <div class="status"><span class="dot" id="dot"></span><span id="status">準備中…</span></div>
     <div class="bar"><i id="bar"></i></div>
-    <button id="pickDir" type="button">選擇存放資料夾（自動分成中獎／銘謝惠顧）</button>
-    <p class="k" id="dirNote">沒選的話，影片會存到「下載」資料夾。</p>
+    <p class="hint">這個頁面要開著才收得到。關掉也沒關係，影片會先留在對方手機，下次打開時自動補傳。</p>
   </section>
 
   <section style="display:flex;flex-direction:column;gap:10px">
-    <div class="head"><h2>收到的影片 <span id="count">0</span></h2><button id="again" type="button" hidden>全部再下載一次</button></div>
-    <ol class="list" id="list"></ol>
-    <p class="empty" id="empty">還沒收到。手機開始傳送後，影片會一段一段出現在這裡。</p>
+    <h2 style="margin:0;font-weight:400;font-size:20px">誰來玩過（這次打開後收到的）</h2>
+    <div class="players" id="players"></div>
+    <p class="empty" id="empty">還沒收到影片。</p>
   </section>
-
-  <p class="note">這個頁面要開著才收得到。每收到一段影片就會自動下載到電腦的「下載」資料夾；如果瀏覽器問「要下載多個檔案嗎」，請按允許。沒有自動下載的話，點上面的檔名也能下載。</p>
 </main>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const files = [];
-  let peer = null;
+  const ls = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
 
-  function download(f) {
-    const a = document.createElement('a'); a.href = f.url; a.download = f.name;
-    document.body.appendChild(a); a.click(); a.remove();
+  // ---- a code that stays the same on this computer, so invite links keep working ----
+  let code = ls.get('xiaohe-recv-code');
+  if (!/^\d{6}$/.test(code || '')) { code = String(Math.floor(100000 + Math.random() * 900000)); ls.set('xiaohe-recv-code', code); }
+  $('code').textContent = code;
+  $('myName').value = ls.get('xiaohe-recv-name') || '';
+  function inviteUrl() {
+    const u = new URL('./', location.href);
+    u.searchParams.set('pc', code);
+    const n = $('myName').value.trim();
+    if (n) u.searchParams.set('from', n);
+    return u.href;
   }
-  function addRow(f) {
-    const li = document.createElement('li'), a = document.createElement('a'), s = document.createElement('span');
-    a.href = f.url; a.download = f.name; a.textContent = f.name;
-    s.textContent = (f.size / 1048576).toFixed(1) + ' MB';
-    li.append(a, s); $('list').prepend(li);
-    $('count').textContent = files.length; $('empty').hidden = true; $('again').hidden = files.length < 2;
-  }
-  $('again').addEventListener('click', () => files.forEach((f, i) => setTimeout(() => download(f), i * 300)));
+  function syncLink() { $('inviteLink').textContent = inviteUrl(); ls.set('xiaohe-recv-name', $('myName').value.trim()); }
+  $('myName').addEventListener('input', syncLink);
+  syncLink();
+  $('copyLink').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(inviteUrl()); $('copyLink').textContent = '複製好了！'; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($('inviteLink')); getSelection().removeAllRanges(); getSelection().addRange(r); $('copyLink').textContent = '已選取，按 Ctrl+C 複製'; }
+    setTimeout(() => { $('copyLink').textContent = '複製邀請連結'; }, 2500);
+  });
 
-  // Chrome / Edge on a computer can write straight into a folder: clips are sorted into 中獎\金額, 銘謝惠顧, 進場, 最後結算
+  // ---- the folder: remembered between visits (Chrome / Edge) ----
   let dir = null;
-  if (!window.showDirectoryPicker) { $('pickDir').hidden = true; $('dirNote').textContent = '這個瀏覽器只能存到「下載」資料夾。用 Chrome 或 Edge 可以自動分資料夾。'; }
+  const idb = () => new Promise((res, rej) => { const r = indexedDB.open('xiaohe-recv', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  async function kv(mode, fn) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('kv', mode), q = fn(tx.objectStore('kv')); tx.oncomplete = () => res(q && q.result); tx.onerror = () => rej(tx.error); }); }
+  function setDir(h) { dir = h; $('dirNote').textContent = `影片會存到「${h.name}」，每個玩家一個資料夾。`; $('resumeDir').hidden = true; $('pickDir').textContent = '換一個資料夾'; }
+  if (!window.showDirectoryPicker) {
+    $('pickDir').hidden = true;
+    $('dirNote').textContent = '這個瀏覽器不能選資料夾，影片會存到「下載」資料夾。用 Chrome 或 Edge 打開這頁，就能自動分資料夾。';
+  } else {
+    kv('readonly', st => st.get('dir')).then(async (h) => {
+      if (!h) return;
+      if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') setDir(h);
+      else { $('resumeDir').hidden = false; $('resumeDir').textContent = `繼續存到「${h.name}」`; $('resumeDir').onclick = async () => { if ((await h.requestPermission({ mode: 'readwrite' })) === 'granted') setDir(h); }; }
+    }).catch(() => {});
+  }
   $('pickDir').addEventListener('click', async () => {
     try {
-      dir = await window.showDirectoryPicker({ mode: 'readwrite', id: 'xiaohe' });
-      $('dirNote').textContent = `會存到「${dir.name}」，自動分成 中獎（依金額）、銘謝惠顧、進場、最後結算。`;
-    } catch (e) { /* closed the picker: keep using Downloads */ }
+      const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'xiaohe', startIn: 'downloads' });
+      setDir(h); kv('readwrite', st => st.put(h, 'dir')).catch(() => {});
+    } catch (e) { /* closed the picker */ }
   });
-  function subPathFor(name) {
+
+  // ---- writing a clip into the player's folder ----
+  const clean = (t) => String(t || '').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 30);
+  function playerFolder(who) {
+    if (!who || !who.player) return '未登記的玩家';
+    const when = String(who.session || '').split('_')[0];
+    return `${clean(who.player)}（${clean(who.inviter) || '某人'}的${clean(who.relation) || '朋友'}）${when ? '_' + when : ''}`;
+  }
+  function kindPath(name) {
     const m = name.match(/_中獎NT(\d+)_/);
     if (m) return ['中獎', `${m[1]}元`];
     if (/_銘謝惠顧_/.test(name)) return ['銘謝惠顧'];
@@ -101,50 +156,80 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--yellow);outline-off
     if (/_最後結算/.test(name)) return ['最後結算'];
     return ['其他'];
   }
-  async function saveSorted(name, blob) {
-    let d = dir;
-    for (const part of subPathFor(name)) d = await d.getDirectoryHandle(part, { create: true });
+  const infoWritten = new Set();
+  async function writeFile(d, name, blob) {
     let fname = name;
-    try { await d.getFileHandle(fname); fname = name.replace(/(\.\w+)$/, `_${Date.now()}$1`); } catch (e) { /* not there yet: good */ }
+    try { await d.getFileHandle(fname); fname = name.replace(/(\.\w+)$/, `_${Date.now()}$1`); } catch (e) { /* not there yet */ }
     const w = await (await d.getFileHandle(fname, { create: true })).createWritable();
     await w.write(blob); await w.close();
   }
+  async function saveClip(name, blob, who) {
+    if (!dir) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${playerFolder(who)}_${name}`; document.body.appendChild(a); a.click(); a.remove(); return; }
+    const top = await dir.getDirectoryHandle(playerFolder(who), { create: true });
+    const key = top.name;
+    if (who && who.player && !infoWritten.has(key)) {
+      infoWritten.add(key);
+      const info = `玩家：${who.player}\n誰找來玩：${who.inviter}\n關係：${who.relation}\n這次遊玩：${who.session}\n`;
+      try { await top.getFileHandle('玩家資料.txt'); } catch (e) { await writeFile(top, '玩家資料.txt', new Blob([info], { type: 'text/plain' })); }
+    }
+    let d = top;
+    for (const part of kindPath(name)) d = await d.getDirectoryHandle(part, { create: true });
+    await writeFile(d, name, blob);
+  }
 
+  // ---- the list of who played ----
+  const players = new Map();
+  function noteClip(who, name, size) {
+    const key = playerFolder(who);
+    if (!players.has(key)) {
+      const el = document.createElement('div'); el.className = 'player';
+      el.innerHTML = '<b></b><span class="meta"></span><ol></ol>';
+      el.querySelector('b').textContent = who && who.player ? `${who.player}（${who.inviter}的${who.relation}）` : '未登記的玩家';
+      $('players').prepend(el); players.set(key, { el, n: 0, mb: 0 });
+    }
+    const p = players.get(key); p.n++; p.mb += size / 1048576;
+    p.el.querySelector('.meta').textContent = `收到 ${p.n} 段 · ${p.mb.toFixed(1)} MB · 資料夾「${key}」`;
+    const li = document.createElement('li'); li.textContent = name; p.el.querySelector('ol').prepend(li);
+    $('empty').hidden = true;
+  }
+
+  // ---- receiving ----
+  let peer = null, retry = 0;
+  function setStatus(text, kind) { $('status').textContent = text; $('dot').className = 'dot' + (kind ? ' ' + kind : ''); }
   function start() {
-    if (!window.Peer) { $('status').textContent = '連不到傳送服務，請確認電腦有網路後重新整理。'; return; }
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    $('code').textContent = code;
-    $('status').textContent = '連線中…';
+    if (!window.Peer) { setStatus('連不到傳送服務，請確認電腦有網路後重新整理。', 'warn'); return; }
+    setStatus('連線中…');
     peer = new Peer('xiaohe-' + code);
-    peer.on('open', () => { $('status').textContent = '等待手機連線…'; });
+    peer.on('open', () => { retry = 0; setStatus('等待玩家的影片…（這頁開著就會自動收）', 'on'); });
     peer.on('error', (e) => {
-      if (e.type === 'unavailable-id') { peer.destroy(); start(); return; }   // someone else holds this code: pick another
+      if (e.type === 'unavailable-id') {   // the old session of this page hasn't timed out yet: try the same code again shortly
+        setStatus('號碼還被上一次佔著，幾秒後重試…', 'warn');
+        try { peer.destroy(); } catch (_) {}
+        setTimeout(start, Math.min(15000, 3000 + retry++ * 2000));
+        return;
+      }
       if (['network', 'server-error', 'socket-error', 'socket-closed', 'disconnected'].includes(e.type)) {
-        $('status').textContent = '和傳送服務的連線斷了，正在重連…';
+        setStatus('和傳送服務的連線斷了，正在重連…', 'warn');
         setTimeout(() => { try { peer.reconnect(); } catch (_) {} }, 2000);
         return;
       }
-      $('status').textContent = '出了點問題（' + e.type + '），重新整理這個頁面再試一次。';
+      if (e.type !== 'peer-unavailable') setStatus('出了點問題（' + e.type + '），重新整理這頁再試一次。', 'warn');
     });
     peer.on('disconnected', () => setTimeout(() => { try { if (!peer.destroyed) peer.reconnect(); } catch (_) {} }, 2000));
     peer.on('connection', (conn) => {
-      let finished = false;
-      $('status').textContent = '手機連上了！';
       conn.on('data', async (d) => {
         if (!d) return;
-        if (d.hello) { $('status').textContent = `手機要傳 ${d.total} 段影片…`; $('bar').style.width = '0'; return; }
-        if (d.done) { finished = true; $('status').textContent = '全部收到了！在電腦的「下載」資料夾。'; return; }
-        if (d.data) {
-          const blob = new Blob([d.data], { type: d.type || 'video/mp4' });
-          const f = { name: d.name || ('小鶴彩券行_' + Date.now() + '.mp4'), url: URL.createObjectURL(blob), size: blob.size };
-          files.push(f); addRow(f);
-          if (dir) { try { await saveSorted(f.name, blob); } catch (e) { download(f); } } else download(f);
-          $('bar').style.width = ((d.i + 1) / d.total * 100) + '%';
-          $('status').textContent = `收到 ${d.i + 1} / ${d.total}`;
-          conn.send({ ack: d.i });
-        }
+        if (d.hello) { setStatus(`手機要傳 ${d.total} 段影片…`, 'on'); $('bar').style.width = '0'; return; }
+        if (d.done) { setStatus('這一批都收到了！', 'on'); return; }
+        if (!d.data) return;
+        const blob = new Blob([d.data], { type: d.type || 'video/mp4' });
+        const name = d.name || ('小鶴彩券行_' + Date.now() + '.mp4');
+        try { await saveClip(name, blob, d.who); } catch (e) { setStatus('存檔失敗：' + (e && e.message) + '（改存到下載）', 'warn'); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); }
+        noteClip(d.who, name, blob.size);
+        if (d.total) $('bar').style.width = ((d.i + 1) / d.total * 100) + '%';
+        setStatus(`收到 ${d.who && d.who.player ? d.who.player + ' 的' : ''}影片：${name}`, 'on');
+        conn.send({ ack: d.i != null ? d.i : 0 });
       });
-      conn.on('close', () => { if (!finished) $('status').textContent = '手機斷線了。在手機上再按一次「開始傳送」，會接著傳沒傳完的。'; });
     });
   }
   start();
