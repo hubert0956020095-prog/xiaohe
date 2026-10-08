@@ -376,6 +376,12 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 .ticket.mega{animation:megaGlow 1.1s ease-in-out 4}
 @keyframes megaGlow{0%,100%{box-shadow:0 0 0 4px var(--yellow),0 0 60px 14px rgba(255,216,74,.55),0 24px 60px rgba(0,0,0,.55)}50%{box-shadow:0 0 0 6px var(--yellow),0 0 120px 40px rgba(255,216,74,.9),0 24px 60px rgba(0,0,0,.55)}}
 @media (prefers-reduced-motion:reduce){.front.entering .rays,.mega-rays,.dealing .mini,.stamp.go,.shake,.ticket.mega,.floater,.whiteout.on .welcome{animation:none}.whiteout.on .welcome{opacity:1;transform:translate(-50%,-50%)}}
+.pname{display:flex;align-items:center;gap:10px;border:2px solid var(--ink);border-radius:12px;padding:6px 12px;background:#fff}
+.pname span{font-size:14px;color:var(--muted-ink);white-space:nowrap}
+.pname input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:20px;color:var(--ink);padding:4px 0}
+.pname input:focus-visible{outline:none}
+.pname:focus-within{box-shadow:0 0 0 3px var(--yellow)}
+.upnote{margin:0;font-size:13px;color:var(--muted-ink)}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
 @media (prefers-reduced-motion:reduce){
   .building,.door{transition:none}.lightbox,.open-sign,.enter{animation:none}.cell.hit{animation:none}.mini{transition:none}
@@ -722,6 +728,8 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       <button type="button" data-v="3000">3,000</button><button type="button" data-v="5000">5,000</button><button type="button" data-v="5800">5,800</button>
     </div>
     <label class="money-in" for="bringIn"><span>NT$</span><input id="bringIn" type="number" min="10" max="100000" step="10" inputmode="numeric" placeholder="輸入金額" aria-label="金額"></label>
+    <label class="pname" id="pnameRow" for="pname" hidden><span>玩家名字</span><input id="pname" maxlength="20" autocomplete="nickname" placeholder="例如：圓圓"></label>
+    <p class="upnote" id="upNote" hidden>小鶴彩券行全程錄影，這次錄的影片會自動上傳給小鶴老闆。</p>
     <p class="err" id="bringErr" hidden></p>
     <div class="row">
       <button class="btn ghost" id="bringCancel" type="button">再想想</button>
@@ -1154,6 +1162,9 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   let bringMode = 'enter', bringThen = null;
   function openBring(mode, then, need) {
     bringMode = mode; bringThen = then || null;
+    const askName = mode === 'enter' && cloudOn();
+    $('pnameRow').hidden = !askName; $('upNote').hidden = !askName;
+    if (askName) $('pname').value = state.player || '';
     $('bringTitle').textContent = mode === 'enter' ? '今天帶多少錢來刮？' : '要再拿多少錢出來？';
     $('bringSub').textContent = mode === 'enter' ? '店裡用的是虛擬錢。刮完以後，再跟老闆用現金算差額。'
       : need > 0 ? `錢包還差 NT$${fmt(need)}，補進來才能繼續。最後一起跟老闆算。` : '會加進錢包，最後一起跟老闆算。';
@@ -1170,6 +1181,12 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   $('bringCancel').addEventListener('click', () => { $('bringOv').hidden = true; });
   $('bringForm').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (bringMode === 'enter' && cloudOn()) {
+      const name = $('pname').value.trim().slice(0, 20);
+      if (!name) { $('bringErr').textContent = '請先填玩家名字，影片會用這個名字分資料夾。'; $('bringErr').hidden = false; $('pname').focus(); return; }
+      state.player = name;
+      if (!state.session) { const d = new Date(), p = (n) => String(n).padStart(2, '0'); state.session = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}_${Math.random().toString(36).slice(2, 6)}`; }
+    }
     const v = Math.floor(+$('bringIn').value || 0);
     if (v < 10 || v > 100000) { $('bringErr').textContent = '請輸入 10 到 100,000 之間的金額。'; $('bringErr').hidden = false; return; }
     state.brought += v; state.wallet += v;
@@ -1670,6 +1687,11 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   // recording is required: there is no switch to turn the camera off
   const CAM = { stream: null, enabled: true, active: null, fit: 'wide' };
   let useRawMic = false;
+  // ---- cloud upload to Supabase Storage. Empty url/key = uploading is off and the game behaves as before.
+  // The publishable (anon) key is meant to live in the page: the bucket's policy only lets players ADD files,
+  // never list, read, overwrite or delete them.
+  const CLOUD = { url: '', key: '', bucket: 'videos' };
+  const cloudOn = () => !!(CLOUD.url && CLOUD.key);
   try { CAM.fit = localStorage.getItem('xiaohe-fit') === 'fill' ? 'fill' : 'wide'; } catch (e) {}
   $('camBtn').hidden = true;
 
@@ -1712,7 +1734,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     const byId = new Map(list.map(c => [c.id, c]));
     memClips.forEach((c, id) => byId.set(id, c));
     clips = [...byId.values()].sort((x, y) => x.at - y.at);
-    const pend = clips.filter(c => !c.saved && !c.sent).length;   // not in the photo album or on the computer yet
+    const pend = clips.filter(c => !c.saved && !c.sent && !c.uploaded).length;   // not in the photo album, on the computer or in the cloud yet
     $('vidBtn').innerHTML = (clips.length ? `影片 ${clips.length}` : '影片') + (pend ? `<span class="badge">${pend}</span>` : '');
     return pend;
   }
@@ -1876,10 +1898,11 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
       rec.onstop = async () => {
         if (!chunks.length) { resolve(null); return; }
         const blob = new Blob(chunks, { type: mime.split(';')[0] });
-        const clip = { ...meta, id: 'c' + at0, at: at0, blob, type: blob.type, burned };
+        const clip = { ...meta, id: 'c' + at0, at: at0, blob, type: blob.type, burned, session: state.session, player: state.player };
         const stored = await putClip(clip); await refreshClips();
         if (!stored) toast('手機空間可能不夠，這段影片只是暫存，請馬上按「存到相簿」', true);
         offerSave(clip);
+        uploadPending();
         resolve(clip);
       };
       if (burned) draw();
@@ -2062,7 +2085,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     const f = camInput.files && camInput.files[0];
     const meta = camPending; camPending = null;
     if (!f || !meta) return;
-    const clip = { ...meta, id: 'c' + Date.now(), at: Date.now(), blob: f, type: f.type || '', burned: false };
+    const clip = { ...meta, id: 'c' + Date.now(), at: Date.now(), blob: f, type: f.type || '', burned: false, session: state.session, player: state.player };
     const stored = await putClip(clip);
     await refreshClips();
     if (!stored) toast('手機空間可能不夠，這段影片只是暫存，請馬上按「存到相簿」', true);
@@ -2119,7 +2142,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
         : `<button class="btn y" type="button" data-save="${c.id}">存到相簿</button>`;
       return `<figure class="vid"><video src="${u}" controls playsinline preload="metadata"></video>
         <figcaption><b>${cap.big}${isFresh(c) ? '<span class="newtag">剛錄好</span>' : ''}</b><span>${cap.small}</span>
-          <span class="vid-state${c.saved || c.sent ? ' ok' : ''}">${[c.saved && '已存相簿', c.sent && '已傳電腦'].filter(Boolean).join(' · ') || '還沒備份'}</span></figcaption>
+          <span class="vid-state${c.saved || c.sent || c.uploaded ? ' ok' : ''}">${[c.uploaded && '已上傳', c.saved && '已存相簿', c.sent && '已傳電腦'].filter(Boolean).join(' · ') || (cloudOn() && c.session ? '等待上傳' : '還沒備份')}</span></figcaption>
         <div class="vid-btns"><button class="btn ghost" type="button" data-del="${c.id}">刪除</button>${btns}</div></figure>`;
     }).join('');
   }
@@ -2327,6 +2350,7 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     try {
       const out = await composite(c, (t, d) => { $('mkText').textContent = `正在把獎項印進影片… ${Math.floor(t)} / ${Math.round(d)} 秒`; });
       await putClip({ ...c, blob: out.blob, type: out.blob.type, burned: true });
+      setTimeout(uploadPending, 500);   // now it has its banner: send it up
       await refreshClips(); renderVids();
       toast('獎項印好了，按「存到相簿」');
     } catch (e) { toast('這支手機不能在網頁裡合成，可以直接存原始檔'); }
@@ -2602,6 +2626,49 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     if (c && c.done) { act.meta.final = c.amount; act.box.cap = { big: `最後拿到 NT$${fmt(c.amount)}`, small: '小鶴彩券行 · 我愛你' }; }
     act.stopIn(sec);
   }
+
+  // ---- cloud upload ----
+  // Folders are ASCII (the storage only accepts plain characters in names); the player's name rides in info.json.
+  let upBusy = false;
+  function cloudPath(c) {
+    const cat = c.kind === 'win' ? (c.prize > 0 ? `win/${c.prize}` : 'lose') : c.kind === 'enter' ? 'enter' : c.kind === 'ending' ? 'ending' : 'other';
+    const base = c.kind === 'win' ? `${c.prize > 0 ? 'win_NT' + c.prize : 'lose'}_${String(c.serial || '').replace(/[^0-9A-Za-z-]/g, '')}` : c.kind;
+    return `${c.session}/${cat}/${base}_${c.at}.${extOf(c.blob)}`;
+  }
+  async function cloudPut(path, body, type) {
+    const url = `${CLOUD.url.replace(/\/$/, '')}/storage/v1/object/${CLOUD.bucket}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    const r = await fetch(url, { method: 'POST', headers: { apikey: CLOUD.key, Authorization: `Bearer ${CLOUD.key}`, 'Content-Type': type, 'x-upsert': 'false' }, body });
+    if (r.ok) return;
+    const t = await r.text().catch(() => '');
+    if (r.status === 409 || /already exists|Duplicate/i.test(t)) return;   // sent before: fine
+    throw new Error(`${r.status} ${t.slice(0, 160)}`);
+  }
+  async function uploadPending() {
+    if (!cloudOn() || upBusy || navigator.onLine === false) return;
+    const todo = clips.filter(c => c.session && !c.uploaded && c.burned !== false && c.blob);
+    const needInfo = state.session && !state.infoUp;
+    if (!todo.length && !needInfo) return;
+    upBusy = true;
+    try {
+      if (needInfo) {
+        const info = { player: state.player, session: state.session, brought: state.brought, startedAt: new Date().toISOString(), game: '小鶴彩券行' };
+        await cloudPut(`${state.session}/info.json`, new Blob([JSON.stringify(info, null, 2)], { type: 'application/json' }), 'application/json');
+        state.infoUp = true; save();
+      }
+      for (const c of todo) {
+        await cloudPut(cloudPath(c), c.blob, c.blob.type || 'video/mp4');
+        c.uploaded = true; await putClip(c);
+      }
+    } catch (e) { console.warn('[upload] will retry:', e && e.message); }
+    finally {
+      upBusy = false;
+      await refreshClips();
+      if (!$('vidOv').hidden) renderVids();
+    }
+  }
+  setInterval(uploadPending, 30000);   // retry whatever is still waiting
+  addEventListener('online', uploadPending);
+  setTimeout(uploadPending, 3000);
 
   // ---------- boot ----------
   function start(data) {
