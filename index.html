@@ -183,6 +183,8 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 .pill{font-size:12px;border-radius:99px;padding:2px 8px;white-space:nowrap}
 .pill.new{background:var(--yellow);color:var(--ink)}.pill.win{background:var(--win);color:var(--ink)}.pill.lose{background:#eee3cc;color:var(--muted-ink)}
 .empty{color:var(--muted-ink);margin:0}
+.cam-intro{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;line-height:1.5}
+.cam-intro b{font-weight:600;color:#b8452a}
 
 /* the scratch ticket */
 .ticket{width:100%;max-width:420px;background:var(--tk-soft);color:var(--tk-ink);border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.55);display:flex;flex-direction:column}
@@ -724,6 +726,20 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
     <p class="err" id="whoErr" hidden></p>
     <div class="row"><button class="btn ghost" type="button" id="whoCancel">再想想</button><button class="btn y" type="submit">登記好了</button></div>
   </form>
+</div>
+<div class="overlay" id="camIntroOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="camIntroTitle">
+    <h3 id="camIntroTitle">進店前，先打開前鏡頭</h3>
+    <p>小鶴彩券行全程錄影，把你刮刮樂的表情都留下來！</p>
+    <ul class="cam-intro">
+      <li>走進店、每刮一張彩券，鏡頭都會<b>自動錄下你的反應</b>，不用自己按。</li>
+      <li>錄影只在角落小小一格，<b>不會擋到刮刮樂</b>。</li>
+      <li>影片都存在遊戲裡：點畫面<b>最下方的「影片」</b>就看得到。</li>
+      <li>玩完可以去<b>回放</b>，中獎的<b>精彩片段</b>會分在「中獎」那一格，一看就找到。</li>
+    </ul>
+    <p class="empty">等一下手機會問能不能用相機和麥克風，請按「允許」。</p>
+    <div class="row"><button class="btn ghost" id="camIntroNo" type="button">再想想</button><button class="btn y" id="camIntroGo" type="button">好，打開鏡頭進店</button></div>
+  </div>
 </div>
 <div class="overlay" id="gateOv" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
@@ -2509,9 +2525,14 @@ body.scratching .savechip{bottom:auto;top:calc(20px + env(safe-area-inset-top,0p
   // the door: no camera, no entry
   async function enterShop() {
     if (state.entryDone) { walkIn(); return; }
+    $('camIntroOv').hidden = false;
+  }
+  $('camIntroNo').addEventListener('click', () => { $('camIntroOv').hidden = true; toast('準備好再點門進來喔'); });
+  $('camIntroGo').addEventListener('click', async () => {
+    $('camIntroOv').hidden = true;
     if (await camStart()) { startEntryRec(); walkIn(); return; }
     $('gateOv').hidden = false;
-  }
+  });
   $('gateRetry').addEventListener('click', async () => {
     if (await camStart()) { $('gateOv').hidden = true; startEntryRec(); walkIn(); }
     else toast('還是沒有鏡頭權限，照上面的方法打開，或改用手機相機錄進場');
