@@ -61,11 +61,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
   <section class="card">
     <h2>① 這台電腦就是影片接收站</h2>
     <p class="hint">不用號碼、不用配對：任何人用遊戲網址玩，影片都會自動存到這台電腦。這頁開著就會收；沒開的時候，影片會先留在對方手機，下次打開這頁自動補傳。</p>
-    <div class="row">
-      <label class="field" for="myName"><span>你的名字</span><input id="myName" maxlength="20" placeholder="例如：阿勳"></label>
-    </div>
-    <p class="hint">要給別人玩，傳這個網址就好（填了你的名字，對方登記時會自動帶入「誰找你來玩」）：</p>
-    <div class="link" id="inviteLink">準備中…</div>
+    <p class="hint">要給別人玩，傳這個短網址就好（看不到你的帳號名稱）：</p>
+    <div class="link" id="inviteLink">https://tinyurl.com/xiaohe-lottery</div>
     <div class="row"><button id="copyLink" type="button">複製遊戲網址</button></div>
   </section>
 
@@ -100,17 +97,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-of
   const ls = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
 
   // ---- the owner's computer answers under one fixed name; the game sends there by default, no code needed ----
-  const HOME_PC = 'xiaohe-hubert0956-pc';
-  $('myName').value = ls.get('xiaohe-recv-name') || '';
-  function inviteUrl() {
-    const u = new URL('./', location.href);
-    const n = $('myName').value.trim();
-    if (n) u.searchParams.set('from', n);
-    return u.href;
-  }
-  function syncLink() { $('inviteLink').textContent = inviteUrl(); ls.set('xiaohe-recv-name', $('myName').value.trim()); }
-  $('myName').addEventListener('input', syncLink);
-  syncLink();
+  const HOME_PC = 'xiaohe-pc-9ubucb4x37kt62';
+  // the link people get is a short one, so the account name in the github.io address isn't in what's shared
+  const SHORT_LINK = 'https://tinyurl.com/xiaohe-lottery';
+  const inviteUrl = () => SHORT_LINK;
   $('copyLink').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(inviteUrl()); $('copyLink').textContent = '複製好了！'; }
     catch (e) { const r = document.createRange(); r.selectNodeContents($('inviteLink')); getSelection().removeAllRanges(); getSelection().addRange(r); $('copyLink').textContent = '已選取，按 Ctrl+C 複製'; }
